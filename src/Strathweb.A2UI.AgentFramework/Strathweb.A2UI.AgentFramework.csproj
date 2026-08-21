@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <RootNamespace>Strathweb.A2UI.AgentFramework</RootNamespace>
+    <Description>Microsoft Agent Framework binding for A2UI: emit declarative UI surfaces from tools and receive user actions back, with no changes to the agent framework itself.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Strathweb.A2UI.Protocol\Strathweb.A2UI.Protocol.csproj" />
+    <ProjectReference Include="..\Strathweb.A2UI.A2A\Strathweb.A2UI.A2A.csproj" />
+    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" />
+    <PackageReference Include="Microsoft.Agents.AI.Abstractions" />
+  </ItemGroup>
+
+</Project>

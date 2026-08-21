@@ -1,0 +1,13 @@
+<Project>
+
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <PropertyGroup>
+    <!--
+      This lives under tests/ but is a publish smoke test, not an xUnit project: it must not pick up
+      the test-project package set or the relaxed analyzer settings it comes with.
+    -->
+    <IsTestProject>false</IsTestProject>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Strathweb.A2UI.Protocol/Strathweb.A2UI.Protocol.csproj" />
+    <Project Path="src/Strathweb.A2UI.A2A/Strathweb.A2UI.A2A.csproj" />
+    <Project Path="src/Strathweb.A2UI.AgentFramework/Strathweb.A2UI.AgentFramework.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/SurveyAgent/SurveyAgent.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Strathweb.A2UI.Protocol.UnitTests/Strathweb.A2UI.Protocol.UnitTests.csproj" />
+    <Project Path="tests/Strathweb.A2UI.Protocol.ConformanceTests/Strathweb.A2UI.Protocol.ConformanceTests.csproj" />
+    <Project Path="tests/Strathweb.A2UI.A2A.UnitTests/Strathweb.A2UI.A2A.UnitTests.csproj" />
+    <Project Path="tests/Strathweb.A2UI.AgentFramework.UnitTests/Strathweb.A2UI.AgentFramework.UnitTests.csproj" />
+    <Project Path="tests/Strathweb.A2UI.IntegrationTests/Strathweb.A2UI.IntegrationTests.csproj" />
+    <Project Path="tests/Strathweb.A2UI.TrimTest/Strathweb.A2UI.TrimTest.csproj" />
+  </Folder>
+</Solution>

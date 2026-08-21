@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net8.0;net10.0</TargetFrameworks>
+    <RootNamespace>Strathweb.A2UI</RootNamespace>
+    <Description>A2UI protocol types: messages, components, catalogs, validation and a streaming parser. BCL only, with no transport or agent-host dependencies.</Description>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="System.Text.Json" />
+  </ItemGroup>
+
+  <!--
+    The Basic Catalog ships embedded, copied straight from the vendored specification. Never
+    transcribed by hand: a hand-edited catalog would disagree with the schemas it is validated against.
+  -->
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)..\..\spec\v0_9_1\catalogs\basic\catalog.json"
+                      LogicalName="Strathweb.A2UI.Catalogs.v0_9_1.basic.catalog.json" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)..\..\spec\v0_9_1\catalogs\basic\rules.txt"
+                      LogicalName="Strathweb.A2UI.Catalogs.v0_9_1.basic.rules.txt" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)..\..\spec\v0_9_1\json\common_types.json"
+                      LogicalName="Strathweb.A2UI.Catalogs.v0_9_1.common_types.json" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,80 @@
+<Project>
+
+  <PropertyGroup>
+    <!-- The prefix every assembly and package id derives from. -->
+    <A2uiOrgPrefix>Strathweb</A2uiOrgPrefix>
+
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsNotAsErrors></WarningsNotAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+    <NoWarn>$(NoWarn);NU5104</NoWarn>
+  </PropertyGroup>
+
+
+  <!--
+    Project-role detection by location. This must happen in Directory.Build.props: the SDK computes
+    DocumentationFile and packaging defaults from these before Directory.Build.targets is imported,
+    so a role set in the project body would be read too late.
+  -->
+  <PropertyGroup>
+    <IsShippingProject Condition="'$(IsShippingProject)' == '' AND $(MSBuildProjectDirectory.StartsWith('$(MSBuildThisFileDirectory)src'))">true</IsShippingProject>
+    <IsTestProject Condition="'$(IsTestProject)' != 'false' AND '$(IsTestProject)' == '' AND $(MSBuildProjectDirectory.StartsWith('$(MSBuildThisFileDirectory)tests'))">true</IsTestProject>
+    <IsSampleProject Condition="'$(IsSampleProject)' == '' AND $(MSBuildProjectDirectory.StartsWith('$(MSBuildThisFileDirectory)samples'))">true</IsSampleProject>
+  </PropertyGroup>
+
+  <!-- Shipping-library defaults. Test and sample projects opt out via IsPackable/IsShipping. -->
+  <PropertyGroup Condition="'$(IsShippingProject)' == 'true'">
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsPackable>true</IsPackable>
+    <IsTrimmable>true</IsTrimmable>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <IsAotCompatible Condition="'$(TargetFramework)' != 'netstandard2.0'">true</IsAotCompatible>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(IsShippingProject)' == 'true'">
+    <Authors>Filip W</Authors>
+    <Company>Strathweb</Company>
+    <Product>A2UI for .NET</Product>
+    <Copyright>Copyright (c) 2026 Filip W</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/filipw/a2ui-dotnet</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/filipw/a2ui-dotnet</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>a2ui;a2a;agent;generative-ui;ai</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <VersionPrefix>0.1.0</VersionPrefix>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(IsSampleProject)' == 'true'">
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591;CA1812</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(IsTestProject)' == 'true'">
+    <IsPackable>false</IsPackable>
+    <!-- xUnit v3 runs on Microsoft.Testing.Platform; VSTest is not supported on the .NET 10 SDK. -->
+    <OutputType>Exe</OutputType>
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+    <!-- IDE0005 only runs when the documentation file is generated; CS1591 is then suppressed below. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Test code is exempt from XML doc and public-API discipline. -->
+    <NoWarn>$(NoWarn);CS1591;CA1707;CA2007;CA1861;xUnit1051</NoWarn>
+  </PropertyGroup>
+
+
+</Project>

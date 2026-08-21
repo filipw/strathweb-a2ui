@@ -1,0 +1,15 @@
+# Conformance cases this library does not run, one entry per case.
+#
+# Blanket rules (unsupported protocol versions, unimplemented actions) live in ConformanceSkips.cs.
+# This file is only for skips specific to one case.
+
+- name: test_custom_catalog_validation_failure_v09
+  reason: >-
+    Asserts a JSON Schema type error ("123 is not of type 'string'"). Catalog checks here are
+    structural (component and property names) because the protocol assembly carries no schema engine.
+
+- name: test_create_a2ui_part_legacy_default
+  reason: >-
+    Asserts that a part built without an explicit version defaults to the deprecated
+    'application/json+a2ui' MIME type. This library never writes that spelling; it accepts it only on
+    read.

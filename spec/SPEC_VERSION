@@ -1,0 +1,4 @@
+# Vendored from https://github.com/a2ui-project/a2ui.git. Do not hand-edit spec/; run scripts/sync-spec.sh.
+repo: a2ui-project/a2ui
+sha: f5baf760d23a5b21ba05a97f7d16d6db73fb8af6
+date: 2026-08-20T16:02:50-07:00

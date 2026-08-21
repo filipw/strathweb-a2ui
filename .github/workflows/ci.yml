@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore A2UI.slnx
+
+      - name: Build
+        run: dotnet build A2UI.slnx --no-restore -c Release
+
+      - name: Test
+        run: dotnet test --solution A2UI.slnx --no-build -c Release
+
+      - name: Publish conformance coverage
+        if: always()
+        run: >-
+          find tests -name conformance-coverage.md -path '*Release*'
+          -exec cp {} conformance-coverage.md ';'
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: conformance-coverage
+          path: conformance-coverage.md
+          if-no-files-found: warn
+
+      - name: Format check
+        run: dotnet format A2UI.slnx --verify-no-changes --no-restore
+
+      - name: Pack
+        run: dotnet pack A2UI.slnx --no-build -c Release -o artifacts
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: artifacts/*.*nupkg
+
+      # A package that does not restore into a clean project is not a package.
+      - name: Consume the packages from a local feed
+        run: ./scripts/verify-package.sh artifacts
+
+  aot:
+    name: Trim and AOT smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      # Any trim or AOT warning out of the shipping libraries fails this job.
+      - name: Publish AOT
+        run: dotnet publish tests/Strathweb.A2UI.TrimTest/Strathweb.A2UI.TrimTest.csproj -c Release
+
+      - name: Run published binary
+        run: ./tests/Strathweb.A2UI.TrimTest/bin/Release/net10.0/linux-x64/native/Strathweb.A2UI.TrimTest
+
+  spec:
+    name: Vendored spec is unmodified
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify spec/
+        run: ./scripts/verify-spec.sh
