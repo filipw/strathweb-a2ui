@@ -103,7 +103,13 @@ public sealed class A2UIAgent : DelegatingAIAgent
     }
 
     private static A2UIInboundResult EmptyInbound(IReadOnlyList<ChatMessage> messages) =>
-        new(messages, [], [], null, new Dictionary<string, System.Text.Json.Nodes.JsonNode?>(StringComparer.Ordinal));
+        new(
+            messages,
+            [],
+            [],
+            null,
+            new Dictionary<string, System.Text.Json.Nodes.JsonNode?>(StringComparer.Ordinal),
+            []);
 
     private IEnumerable<AgentResponseUpdate> Emit(AgentSession? session, IReadOnlyList<A2UIContent> emitted)
     {

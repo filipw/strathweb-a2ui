@@ -72,4 +72,19 @@ var data = A2UIRunContext.GetSurfaceData("survey_01j8x9");
 ```
 
 Per the specification a data model goes only to the agent that created the surface. Data for a surface
-this session did not create is dropped before it reaches your code.
+this session did not create is dropped before it reaches your code, and the surface id is listed on
+`A2UIRunContext.Current.IgnoredSurfaceData`.
+
+## Session state is required for any of this
+
+Which surfaces this session created is tracked in the agent session, so anything that spans turns
+needs the host to persist sessions. `AddA2AServer` falls back to `NoopAgentSessionStore` when no
+store is registered for the agent, which hands the agent a fresh session on every turn. Nothing
+fails; surface tracking and data-model reconciliation simply stop working.
+
+```csharp
+builder.Services.AddKeyedSingleton<AgentSessionStore>(agent.Name, new InMemoryAgentSessionStore());
+builder.Services.AddA2AServer(agent);
+```
+
+If `IgnoredSurfaceData` lists surfaces you know you created, this is why.

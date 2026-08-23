@@ -36,7 +36,7 @@ public class A2UIMetadataTests
     }
 
     [Fact]
-    public void Capabilities_UnderADifferentVersionKey_AreNotRead()
+    public void Capabilities_UnderAnotherProtocolFamily_AreNotRead()
     {
         var metadata = new Dictionary<string, JsonElement>(StringComparer.Ordinal)
         {
@@ -45,6 +45,23 @@ public class A2UIMetadataTests
         };
 
         Assert.False(A2UIMetadata.TryReadCapabilities(metadata, Profile, out _));
+    }
+
+    [Theory]
+    [InlineData("v0.9")]
+    [InlineData("v0.9.1")]
+    public void Capabilities_UnderEitherKeyOfTheV0_9Family_AreRead(string key)
+    {
+        // The v0.9.1 schema requires "v0.9", but a renderer configured for v0.9.1 sends "v0.9.1".
+        // Reading only one of them disables negotiation silently instead of failing.
+        var metadata = new Dictionary<string, JsonElement>(StringComparer.Ordinal)
+        {
+            ["a2uiClientCapabilities"] = JsonDocument
+                .Parse("{\"" + key + "\":{\"supportedCatalogIds\":[\"std\"]}}").RootElement.Clone(),
+        };
+
+        Assert.True(A2UIMetadata.TryReadCapabilities(metadata, Profile, out var capabilities));
+        Assert.Equal(["std"], capabilities.SupportedCatalogIds);
     }
 
     [Fact]

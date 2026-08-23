@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Strathweb Coffee</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Strathweb Coffee</h1>
+      <p>
+        Everything below the line is drawn by
+        <a href="https://www.npmjs.com/package/@a2ui/lit">&#64;a2ui/lit</a> from A2UI messages the
+        agent sent over A2A. Nothing here knows what a coffee is.
+      </p>
+    </header>
+
+    <main>
+      <section id="surfaces" aria-live="polite">
+        <p class="placeholder">Connecting to the agent&hellip;</p>
+      </section>
+
+      <section id="log">
+        <h2>Wire log</h2>
+        <ol id="entries"></ol>
+      </section>
+    </main>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

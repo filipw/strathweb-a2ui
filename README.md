@@ -88,7 +88,9 @@ all 24 worked examples the specification ships.
 - [Actions](docs/actions.md)
 - [Protocol versions](docs/versioning.md)
 - [Conformance and scope](docs/conformance.md)
-- [samples/SurveyAgent](samples/SurveyAgent)
+- [samples/CoffeeShop](samples/CoffeeShop), an agent plus a browser front end using the official
+  `@a2ui/lit` renderer
+- [samples/SurveyAgent](samples/SurveyAgent), the server side on its own
 
 ## Building
 

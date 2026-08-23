@@ -81,8 +81,24 @@ public sealed class A2UIRendererCapabilities
 
         capabilities = null!;
 
-        if (node is not JsonObject obj || obj[profile.CapabilitiesVersionKey] is not JsonObject body ||
-            body["supportedCatalogIds"] is not JsonArray ids)
+        if (node is not JsonObject obj)
+        {
+            return false;
+        }
+
+        JsonArray? ids = null;
+        JsonObject? body = null;
+        foreach (var key in profile.AcceptedCapabilitiesVersionKeys)
+        {
+            if (obj[key] is JsonObject candidate && candidate["supportedCatalogIds"] is JsonArray candidateIds)
+            {
+                body = candidate;
+                ids = candidateIds;
+                break;
+            }
+        }
+
+        if (body is null || ids is null)
         {
             return false;
         }

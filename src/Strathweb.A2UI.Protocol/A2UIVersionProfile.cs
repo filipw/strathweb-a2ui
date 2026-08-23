@@ -51,6 +51,12 @@ public abstract class A2UIVersionProfile
     /// <summary>The key inside the capabilities object naming the protocol family, for example <c>v0.9</c>.</summary>
     public abstract string CapabilitiesVersionKey { get; }
 
+    /// <summary>
+    /// Capabilities keys accepted on read. The v0.9.1 schema requires <c>v0.9</c>, but renderers
+    /// configured for v0.9.1 send <c>v0.9.1</c>, and ignoring them disables negotiation silently.
+    /// </summary>
+    public abstract IReadOnlyList<string> AcceptedCapabilitiesVersionKeys { get; }
+
     /// <summary>The A2A agent extension URI that advertises A2UI support at this version.</summary>
     public abstract string ExtensionUri { get; }
 
@@ -76,6 +82,7 @@ public abstract class A2UIVersionProfile
     {
         private static readonly A2UIVersion[] Accepted = [A2UIVersion.V0_9, A2UIVersion.V0_9_1];
         private static readonly string[] MediaTypes = ["application/a2ui+json", "application/json+a2ui"];
+        private static readonly string[] CapabilitiesKeys = ["v0.9", "v0.9.1"];
 
         public override A2UIVersion EmitVersion => A2UIVersion.V0_9_1;
 
@@ -86,6 +93,8 @@ public abstract class A2UIVersionProfile
         public override string DataModelMetadataKey => "a2uiClientDataModel";
 
         public override string CapabilitiesVersionKey => "v0.9";
+
+        public override IReadOnlyList<string> AcceptedCapabilitiesVersionKeys => CapabilitiesKeys;
 
         public override string ExtensionUri => "https://a2ui.org/a2a-extension/a2ui/v0.9.1";
 

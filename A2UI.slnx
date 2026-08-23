@@ -5,6 +5,7 @@
     <Project Path="src/Strathweb.A2UI.AgentFramework/Strathweb.A2UI.AgentFramework.csproj" />
   </Folder>
   <Folder Name="/samples/">
+    <Project Path="samples/CoffeeShop/CoffeeShop.csproj" />
     <Project Path="samples/SurveyAgent/SurveyAgent.csproj" />
   </Folder>
   <Folder Name="/tests/">

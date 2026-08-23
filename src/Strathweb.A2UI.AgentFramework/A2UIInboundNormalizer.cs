@@ -36,16 +36,17 @@ public sealed class A2UIInboundNormalizer
         var actions = new List<ActionMessage>();
         var errors = new List<ErrorMessage>();
         var surfaceData = new Dictionary<string, JsonNode?>(StringComparer.Ordinal);
+        var ignored = new List<string>();
         A2UIRendererCapabilities? capabilities = null;
 
         foreach (var message in messages)
         {
             capabilities ??= ReadCapabilities(message);
-            ReadSurfaceData(message, knownSurfaces, surfaceData);
+            ReadSurfaceData(message, knownSurfaces, surfaceData, ignored);
             normalized.Add(NormalizeMessage(message, actions, errors));
         }
 
-        return new A2UIInboundResult(normalized, actions, errors, capabilities, surfaceData);
+        return new A2UIInboundResult(normalized, actions, errors, capabilities, surfaceData, ignored);
     }
 
     /// <summary>Describes an action in the plainest sentence that still carries every value the user chose.</summary>
@@ -164,7 +165,8 @@ public sealed class A2UIInboundNormalizer
     private void ReadSurfaceData(
         ChatMessage message,
         A2UISurfaceRegistry? knownSurfaces,
-        Dictionary<string, JsonNode?> into)
+        Dictionary<string, JsonNode?> into,
+        List<string> ignored)
     {
         if (message.AdditionalProperties is not { } properties ||
             !A2UIMetadata.TryReadDataModel(ToMetadata(properties), profile, out var dataModel))
@@ -179,6 +181,10 @@ public sealed class A2UIInboundNormalizer
             if (knownSurfaces is null || knownSurfaces.Contains(pair.Key))
             {
                 into[pair.Key] = pair.Value;
+            }
+            else
+            {
+                ignored.Add(pair.Key);
             }
         }
     }

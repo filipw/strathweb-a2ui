@@ -55,3 +55,8 @@ removing them does not turn a deep payload into a stack overflow.
 
 **The deprecated MIME type is never written.** `application/json+a2ui` is accepted on read for v0.8
 and early v0.9 peers. Parts this library produces always carry `application/a2ui+json`.
+
+**Capabilities are read under either v0.9 key.** `client_capabilities.json` requires the key `v0.9`,
+but a renderer configured for v0.9.1 sends `v0.9.1` instead: `@a2ui/lit` 0.10.3 does exactly that.
+Accepting only the schema-correct key would silently ignore those renderers, so both are read. This
+library writes `v0.9`.

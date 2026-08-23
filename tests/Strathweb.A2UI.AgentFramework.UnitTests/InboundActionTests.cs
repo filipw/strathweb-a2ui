@@ -145,14 +145,16 @@ public class InboundActionTests
     }
 
     [Fact]
-    public void Normalize_ADataModelForSomebodyElsesSurface_IsDropped()
+    public void Normalize_ADataModelForSomebodyElsesSurface_IsDroppedButReported()
     {
-        // A surface's data model belongs to the agent that created it. This one did not.
+        // A surface's data model belongs to the agent that created it. Dropping it silently would
+        // also hide a missing session store, where nothing is ever recognised.
         var result = new A2UIInboundNormalizer().Normalize(
             [WithDataModel("someone_elses_surface")],
             new A2UISurfaceRegistry());
 
         Assert.Empty(result.SurfaceData);
+        Assert.Equal(["someone_elses_surface"], result.IgnoredSurfaceData);
     }
 
     [Fact]

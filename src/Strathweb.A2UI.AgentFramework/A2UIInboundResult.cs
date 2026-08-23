@@ -13,13 +13,15 @@ public sealed class A2UIInboundResult
         IReadOnlyList<ActionMessage> actions,
         IReadOnlyList<ErrorMessage> errors,
         A2UIRendererCapabilities? rendererCapabilities,
-        IReadOnlyDictionary<string, JsonNode?> surfaceData)
+        IReadOnlyDictionary<string, JsonNode?> surfaceData,
+        IReadOnlyList<string> ignoredSurfaceData)
     {
         Messages = messages;
         Actions = actions;
         Errors = errors;
         RendererCapabilities = rendererCapabilities;
         SurfaceData = surfaceData;
+        IgnoredSurfaceData = ignoredSurfaceData;
     }
 
     /// <summary>
@@ -42,6 +44,17 @@ public sealed class A2UIInboundResult
     /// created. Empty unless those surfaces asked for it with <c>sendDataModel</c>.
     /// </summary>
     public IReadOnlyDictionary<string, JsonNode?> SurfaceData { get; }
+
+    /// <summary>
+    /// Surfaces the renderer reported data for that this session did not create, and whose data was
+    /// therefore dropped.
+    /// </summary>
+    /// <remarks>
+    /// Usually this is another agent's surface, which is what the rule is for. It is also what a
+    /// missing session store looks like: with no state carried between turns the session recognises
+    /// nothing, and every data model is discarded.
+    /// </remarks>
+    public IReadOnlyList<string> IgnoredSurfaceData { get; }
 
     /// <summary>Whether the renderer sent anything A2UI at all.</summary>
     public bool IsEmpty => Actions.Count == 0 && Errors.Count == 0 && SurfaceData.Count == 0;
