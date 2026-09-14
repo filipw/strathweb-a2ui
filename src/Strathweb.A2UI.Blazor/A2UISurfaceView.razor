@@ -1,0 +1,137 @@
+@implements IDisposable
+
+<div class="a2ui-surface" data-surface-id="@Surface.SurfaceId">
+    @if (Surface.Root is null)
+    {
+        <div class="a2ui-pending">@PendingText</div>
+    }
+    else
+    {
+        <CascadingValue Value="this" IsFixed="true">
+            <A2UIComponentView ComponentId="@Surface.Root.Id" Scope="@A2UIDataScope.Root" Generation="@generation" />
+        </CascadingValue>
+    }
+</div>
+
+@code {
+    private int generation;
+    private IReadOnlyDictionary<string, IReadOnlyList<string>> failures =
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+    private A2UIRenderSurface? subscribed;
+
+    /// <summary>The surface to draw.</summary>
+    [Parameter, EditorRequired]
+    public A2UIRenderSurface Surface { get; set; } = default!;
+
+    /// <summary>
+    /// Called with the action to send to the agent when the user triggers one and every check on the
+    /// surface passes.
+    /// </summary>
+    [Parameter]
+    public EventCallback<ActionMessage> OnAction { get; set; }
+
+    /// <summary>Called when a surface asks to open a URL. Defaults to doing nothing.</summary>
+    [Parameter]
+    public EventCallback<Uri> OnOpenUrl { get; set; }
+
+    /// <summary>What to show while the surface has no root yet.</summary>
+    [Parameter]
+    public string PendingText { get; set; } = "Loading…";
+
+    /// <summary>Whether the last dispatch is still in flight; buttons are disabled meanwhile.</summary>
+    public bool IsBusy { get; private set; }
+
+    /// <summary>Whether check failures are shown. Turned on by the first dispatch that fails a check.</summary>
+    public bool ShowValidation { get; private set; }
+
+    /// <summary>The check failures to show for a component, by its child key.</summary>
+    public IReadOnlyList<string> FailuresFor(string key) =>
+        ShowValidation && failures.TryGetValue(key, out var messages) ? messages : [];
+
+    /// <summary>
+    /// Runs every check on the surface and, when all pass, builds and dispatches the component's action.
+    /// </summary>
+    public async Task DispatchAsync(A2UIComponent component, A2UIDataScope scope)
+    {
+        if (IsBusy)
+        {
+            return;
+        }
+
+        failures = Surface.CheckAll();
+        if (failures.Count > 0)
+        {
+            ShowValidation = true;
+            Refresh();
+            return;
+        }
+
+        ShowValidation = false;
+
+        var action = Surface.CreateAction(component, scope);
+        if (action is null)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        Refresh();
+        try
+        {
+            await OnAction.InvokeAsync(action);
+        }
+        finally
+        {
+            IsBusy = false;
+            Refresh();
+        }
+    }
+
+    /// <summary>Writes a value the user entered and re-evaluates checks if they are showing.</summary>
+    public void SetValue(A2UIComponent component, string property, JsonNode? value, A2UIDataScope scope)
+    {
+        Surface.TrySetValue(component, property, value, scope);
+        if (ShowValidation)
+        {
+            failures = Surface.CheckAll();
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(subscribed, Surface))
+        {
+            return;
+        }
+
+        Unsubscribe();
+        subscribed = Surface;
+        Surface.Changed += OnChanged;
+        Surface.OpenUrlRequested += OnOpenUrlRequested;
+    }
+
+    private void OnChanged(object? sender, EventArgs e) => Refresh();
+
+    private void OnOpenUrlRequested(object? sender, A2UIOpenUrlEventArgs e) =>
+        _ = InvokeAsync(() => OnOpenUrl.InvokeAsync(e.Url));
+
+    private void Refresh()
+    {
+        generation++;
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void Unsubscribe()
+    {
+        if (subscribed is null)
+        {
+            return;
+        }
+
+        subscribed.Changed -= OnChanged;
+        subscribed.OpenUrlRequested -= OnOpenUrlRequested;
+        subscribed = null;
+    }
+
+    public void Dispose() => Unsubscribe();
+}

@@ -1,0 +1,59 @@
+/* Shared look for the A2UI sample apps. The rendered surfaces themselves are styled by a2ui.css. */
+
+:root {
+  --bg: #f3f5f1;
+  --surface: #ffffff;
+  --ink: #17201c;
+  --ink-2: #4a544f;
+  --ink-3: #7a857f;
+  --rule: #d9dfd8;
+  --accent: #2b6b5b;
+  --accent-soft: #dcebe4;
+  --err: #a4231c;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.5; }
+h1, h2 { margin: 0; line-height: 1.2; }
+
+.shell { max-width: 1180px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+.shell-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 2rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+.shell-eyebrow { font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.shell-header h1 { font-size: 1.7rem; margin-top: 0.25rem; }
+.shell-lead { margin: 0.4rem 0 0; color: var(--ink-2); max-width: 60ch; }
+.shell-model { margin: 0; font-size: 0.82rem; color: var(--ink-3); max-width: 28ch; text-align: right; }
+.shell-main { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr); gap: 1.5rem; align-items: start; }
+@media (max-width: 900px) { .shell-main { grid-template-columns: 1fr; } .shell-model { text-align: left; } }
+
+/* Chat */
+.chat { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; display: flex; flex-direction: column; min-height: 60vh; }
+.transcript { flex: 1; padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; overflow-y: auto; max-height: 70vh; }
+.chat-empty { color: var(--ink-3); margin: auto; text-align: center; }
+.entry { display: flex; flex-direction: column; gap: 0.6rem; max-width: 100%; }
+.entry-user { align-items: flex-end; }
+.entry-agent { align-items: stretch; }
+.bubble { padding: 0.6rem 0.9rem; border-radius: 12px; white-space: pre-wrap; overflow-wrap: anywhere; max-width: 80%; }
+.entry-user .bubble { background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+.entry-agent .bubble { background: var(--bg); border-bottom-left-radius: 4px; align-self: flex-start; }
+.surface-slot { width: 100%; }
+.typing { color: var(--ink-3); font-size: 0.85rem; }
+.chat-error { color: var(--err); font-size: 0.9rem; }
+.suggestions { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0 1.25rem 0.75rem; }
+.suggestion { font: inherit; font-size: 0.85rem; padding: 0.3rem 0.8rem; border-radius: 999px; border: 1px solid var(--rule); background: var(--surface); color: var(--accent); cursor: pointer; }
+.suggestion:hover:not(:disabled) { background: var(--accent-soft); }
+.composer { display: flex; gap: 0.5rem; padding: 0.75rem 1.25rem 1rem; border-top: 1px solid var(--rule); }
+.composer-input { flex: 1; font: inherit; padding: 0.6rem 0.8rem; border: 1px solid var(--rule); border-radius: 8px; }
+.composer-send { font: inherit; padding: 0.6rem 1.1rem; border-radius: 8px; border: 0; background: var(--accent); color: #fff; cursor: pointer; }
+.composer-send:disabled, .suggestion:disabled { opacity: 0.5; cursor: default; }
+
+/* Wire log */
+.wire { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 1rem 1.25rem; }
+.wire h2 { font-size: 0.95rem; margin-bottom: 0.75rem; }
+.wire-entries { list-style: none; margin: 0; padding: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.76rem; display: flex; flex-direction: column; gap: 0.35rem; max-height: 70vh; overflow-y: auto; }
+.wire-entries li { display: grid; grid-template-columns: auto auto 1fr; gap: 0.6rem; align-items: baseline; }
+.wire-time { color: var(--ink-3); }
+.wire-kind { color: var(--ink-2); white-space: nowrap; }
+.wire-text { overflow-wrap: anywhere; }
+.wire-out .wire-kind { color: var(--accent); }
+.wire-err .wire-kind, .wire-err .wire-text { color: var(--err); }
+.wire-log .wire-kind { color: #7c5a00; }

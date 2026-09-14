@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <RootNamespace>Strathweb.A2UI.Blazor</RootNamespace>
+    <Description>Blazor renderer for A2UI's Basic Catalog: drop an A2UISurfaceView into a page and it draws the surfaces an agent sends, binds inputs to the data model, runs client-side checks and dispatches actions.</Description>
+    <!-- Razor-generated code is not annotated for the trim and AOT analyzers; the library is still trimmable. -->
+    <IsAotCompatible>false</IsAotCompatible>
+    <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Strathweb.A2UI.Rendering\Strathweb.A2UI.Rendering.csproj" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+</Project>

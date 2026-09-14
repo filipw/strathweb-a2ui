@@ -1,0 +1,408 @@
+@{
+    var component = Owner.Surface.GetComponent(ComponentId);
+}
+
+@if (component is null)
+{
+    <div class="a2ui-missing" data-component-id="@ComponentId">Missing component: @ComponentId</div>
+}
+else
+{
+    var weight = Owner.Surface.ResolveNumber(component, "weight", Scope);
+    var style = weight is { } w ? $"flex-grow:{w.ToString(System.Globalization.CultureInfo.InvariantCulture)}" : null;
+    var key = Scope.IsItem ? Scope.ItemPath! : component.Id;
+
+    switch (component.Component)
+    {
+        case "Text":
+            @RenderText(component, style)
+            break;
+
+        case "Image":
+            <img class="@Css("a2ui-image", "a2ui-image-" + Str(component, "variant", "mediumFeature"), "a2ui-fit-" + Str(component, "fit", "contain"))"
+                 style="@style" src="@Str(component, "url")" alt="@Str(component, "description")" data-component-id="@component.Id" />
+            break;
+
+        case "Icon":
+            <span class="a2ui-icon" style="@style" data-icon="@Str(component, "name")" title="@Str(component, "name")" data-component-id="@component.Id">@A2UIIconGlyphs.Get(Str(component, "name"))</span>
+            break;
+
+        case "Video":
+            <video class="a2ui-video" style="@style" controls src="@Str(component, "url")" data-component-id="@component.Id"></video>
+            break;
+
+        case "AudioPlayer":
+            <div class="a2ui-audio" style="@style" data-component-id="@component.Id">
+                @if (Str(component, "description") is { Length: > 0 } audioDescription)
+                {
+                    <div class="a2ui-caption">@audioDescription</div>
+                }
+                <audio controls src="@Str(component, "url")"></audio>
+            </div>
+            break;
+
+        case "Row":
+        case "Column":
+            <div class="@Css(component.Component == "Row" ? "a2ui-row" : "a2ui-column", "a2ui-justify-" + Str(component, "justify", "start"), "a2ui-align-" + Str(component, "align", component.Component == "Row" ? "center" : "stretch"))"
+                 style="@style" data-component-id="@component.Id">
+                @RenderChildren(component)
+            </div>
+            break;
+
+        case "List":
+            <div class="@Css("a2ui-list", "a2ui-list-" + Str(component, "direction", "vertical"), "a2ui-align-" + Str(component, "align", "stretch"))"
+                 style="@style" data-component-id="@component.Id">
+                @RenderChildren(component)
+            </div>
+            break;
+
+        case "Card":
+            <div class="a2ui-card" style="@style" data-component-id="@component.Id">
+                @RenderChild(component, "child")
+            </div>
+            break;
+
+        case "Divider":
+            <hr class="@Css("a2ui-divider", "a2ui-divider-" + Str(component, "axis", "horizontal"))" style="@style" data-component-id="@component.Id" />
+            break;
+
+        case "Tabs":
+            @RenderTabs(component, key, style)
+            break;
+
+        case "Modal":
+            @RenderModal(component, key, style)
+            break;
+
+        case "Button":
+            <button type="button" class="@Css("a2ui-button", "a2ui-button-" + Str(component, "variant", "default"))" style="@style"
+                    disabled="@Owner.IsBusy" data-component-id="@component.Id"
+                    @onclick="@(() => Owner.DispatchAsync(component, Scope))">
+                @RenderChild(component, "child")
+            </button>
+            @RenderFailures(key)
+            break;
+
+        case "TextField":
+            @RenderTextField(component, key, style)
+            break;
+
+        case "CheckBox":
+            <label class="a2ui-checkbox" style="@style" data-component-id="@component.Id">
+                <input type="checkbox" checked="@Owner.Surface.ResolveBoolean(component, "value", Scope)"
+                       @onchange="@(e => Owner.SetValue(component, "value", JsonValue.Create(e.Value is true), Scope))" />
+                <span>@Str(component, "label")</span>
+            </label>
+            @RenderFailures(key)
+            break;
+
+        case "ChoicePicker":
+            @RenderChoicePicker(component, key, style)
+            break;
+
+        case "Slider":
+            @RenderSlider(component, key, style)
+            break;
+
+        case "DateTimeInput":
+            @RenderDateTimeInput(component, key, style)
+            break;
+
+        default:
+            <div class="a2ui-unknown" style="@style" data-component-id="@component.Id">Unsupported component: @component.Component</div>
+            break;
+    }
+}
+
+@code {
+    private readonly Dictionary<string, int> selectedTabs = new(StringComparer.Ordinal);
+    private readonly HashSet<string> openModals = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> filters = new(StringComparer.Ordinal);
+
+    [CascadingParameter]
+    public A2UISurfaceView Owner { get; set; } = default!;
+
+    /// <summary>The component to draw.</summary>
+    [Parameter, EditorRequired]
+    public string ComponentId { get; set; } = string.Empty;
+
+    /// <summary>The scope its bindings resolve in.</summary>
+    [Parameter]
+    public A2UIDataScope Scope { get; set; } = A2UIDataScope.Root;
+
+    /// <summary>Changes whenever the surface changes, so every view down the tree re-renders.</summary>
+    [Parameter]
+    public int Generation { get; set; }
+
+    private string Str(A2UIComponent component, string property, string fallback = "") =>
+        Owner.Surface.ResolveString(component, property, Scope, fallback);
+
+    private static string Css(params string[] classes) => string.Join(' ', classes.Where(c => c.Length > 0));
+
+    private static string Inv(double value) => value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    private static string InputId(string key) => "a2ui-" + key.Replace('/', '-');
+
+    private void SelectTab(string key, int index) => selectedTabs[key] = index;
+
+    private void OpenModal(string key) => openModals.Add(key);
+
+    private void CloseModal(string key) => openModals.Remove(key);
+
+    private void SetFilter(string key, string? value) => filters[key] = value ?? string.Empty;
+
+    private void Choose(A2UIComponent component, IReadOnlyList<string> selected, string value, bool multiple, bool on)
+    {
+        var next = multiple ? new List<string>(selected) : [];
+        next.Remove(value);
+        if (on)
+        {
+            next.Add(value);
+        }
+
+        Owner.SetValue(component, "value", new JsonArray(next.Select(v => (JsonNode)JsonValue.Create(v)).ToArray()), Scope);
+    }
+
+    private static double ParseNumber(object? raw, double fallback) =>
+        double.TryParse(raw?.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var n) ? n : fallback;
+
+    private RenderFragment RenderChild(A2UIComponent component, string property) => builder =>
+    {
+        if (A2UIRenderSurface.ChildId(component, property) is { } childId)
+        {
+            builder.OpenComponent<A2UIComponentView>(0);
+            builder.AddComponentParameter(1, nameof(ComponentId), childId);
+            builder.AddComponentParameter(2, nameof(Scope), Scope);
+            builder.AddComponentParameter(3, nameof(Generation), Generation);
+            builder.CloseComponent();
+        }
+    };
+
+    private RenderFragment RenderChildren(A2UIComponent component) => builder =>
+    {
+        foreach (var child in Owner.Surface.Children(component, "children", Scope))
+        {
+            builder.OpenComponent<A2UIComponentView>(0);
+            builder.SetKey(child.Key);
+            builder.AddComponentParameter(1, nameof(ComponentId), child.ComponentId);
+            builder.AddComponentParameter(2, nameof(Scope), child.Scope);
+            builder.AddComponentParameter(3, nameof(Generation), Generation);
+            builder.CloseComponent();
+        }
+    };
+
+    private RenderFragment RenderText(A2UIComponent component, string? style) => __builder =>
+    {
+        var variant = Str(component, "variant", "body");
+        var html = A2UIMarkdown.ToHtml(Str(component, "text"));
+        var css = Css("a2ui-text", "a2ui-text-" + variant);
+
+        if (variant == "h1")
+        {
+            <h1 class="@css" style="@style" data-component-id="@component.Id">@html</h1>
+        }
+        else if (variant == "h2")
+        {
+            <h2 class="@css" style="@style" data-component-id="@component.Id">@html</h2>
+        }
+        else if (variant == "h3")
+        {
+            <h3 class="@css" style="@style" data-component-id="@component.Id">@html</h3>
+        }
+        else if (variant == "h4")
+        {
+            <h4 class="@css" style="@style" data-component-id="@component.Id">@html</h4>
+        }
+        else if (variant == "h5")
+        {
+            <h5 class="@css" style="@style" data-component-id="@component.Id">@html</h5>
+        }
+        else if (variant == "caption")
+        {
+            <span class="@css" style="@style" data-component-id="@component.Id">@html</span>
+        }
+        else
+        {
+            <p class="@css" style="@style" data-component-id="@component.Id">@html</p>
+        }
+    };
+
+    private RenderFragment RenderFailures(string key) => __builder =>
+    {
+        var failures = Owner.FailuresFor(key);
+        if (failures.Count == 0)
+        {
+            return;
+        }
+
+        <ul class="a2ui-errors" role="alert">
+            @foreach (var failure in failures)
+            {
+                <li>@failure</li>
+            }
+        </ul>
+    };
+
+    private RenderFragment RenderTabs(A2UIComponent component, string key, string? style) => __builder =>
+    {
+        var tabs = (component.Properties["tabs"] as JsonArray)?.OfType<JsonObject>().ToList() ?? [];
+        var selected = selectedTabs.TryGetValue(key, out var index) && index < tabs.Count ? index : 0;
+
+        <div class="a2ui-tabs" style="@style" data-component-id="@component.Id">
+            <div class="a2ui-tablist" role="tablist">
+                @for (var i = 0; i < tabs.Count; i++)
+                {
+                    var tabIndex = i;
+                    var title = A2UIFunctions.Display(Owner.Surface.Resolve(Strathweb.A2UI.Values.DynamicValue.FromJson(tabs[i]["title"]), Scope));
+                    <button type="button" role="tab" class="@Css("a2ui-tab", tabIndex == selected ? "a2ui-tab-selected" : "")"
+                            aria-selected="@(tabIndex == selected ? "true" : "false")"
+                            @onclick="@(() => SelectTab(key, tabIndex))">@title</button>
+                }
+            </div>
+            <div class="a2ui-tab-panel" role="tabpanel">
+                @if (selected < tabs.Count && tabs[selected]["child"] is JsonValue childValue && childValue.TryGetValue<string>(out var childId))
+                {
+                    <A2UIComponentView ComponentId="@childId" Scope="@Scope" Generation="@Generation" />
+                }
+            </div>
+        </div>
+    };
+
+    private RenderFragment RenderModal(A2UIComponent component, string key, string? style) => __builder =>
+    {
+        <div class="a2ui-modal-host" style="@style" data-component-id="@component.Id">
+            <div class="a2ui-modal-trigger" @onclick="@(() => OpenModal(key))">
+                @RenderChild(component, "trigger")
+            </div>
+            @if (openModals.Contains(key))
+            {
+                <div class="a2ui-modal-backdrop" @onclick="@(() => CloseModal(key))">
+                    <div class="a2ui-modal" role="dialog" aria-modal="true" @onclick:stopPropagation="true">
+                        <button type="button" class="a2ui-modal-close" aria-label="Close" @onclick="@(() => CloseModal(key))">&#x2715;</button>
+                        @RenderChild(component, "content")
+                    </div>
+                </div>
+            }
+        </div>
+    };
+
+    private RenderFragment RenderTextField(A2UIComponent component, string key, string? style) => __builder =>
+    {
+        var variant = Str(component, "variant", "shortText");
+        var value = Str(component, "value");
+        var inputId = InputId(key);
+        var type = variant switch { "number" => "number", "obscured" => "password", _ => "text" };
+
+        <div class="a2ui-field" style="@style" data-component-id="@component.Id">
+            <label class="a2ui-label" for="@inputId">@Str(component, "label")</label>
+            @if (variant == "longText")
+            {
+                <textarea id="@inputId" class="a2ui-input" rows="3" value="@value"
+                          @onchange="@(e => Owner.SetValue(component, "value", JsonValue.Create(e.Value?.ToString()), Scope))"></textarea>
+            }
+            else
+            {
+                <input id="@inputId" class="a2ui-input" type="@type" value="@value"
+                       @onchange="@(e => Owner.SetValue(component, "value", JsonValue.Create(e.Value?.ToString()), Scope))" />
+            }
+            @RenderFailures(key)
+        </div>
+    };
+
+    private RenderFragment RenderChoicePicker(A2UIComponent component, string key, string? style) => __builder =>
+    {
+        var multiple = Str(component, "variant", "mutuallyExclusive") == "multipleSelection";
+        var chips = Str(component, "displayStyle", "checkbox") == "chips";
+        var filterable = Owner.Surface.ResolveBoolean(component, "filterable", Scope);
+        var selected = Owner.Surface.ResolveStrings(component, "value", Scope);
+        var options = (component.Properties["options"] as JsonArray)?.OfType<JsonObject>().ToList() ?? [];
+        var filter = filters.TryGetValue(key, out var f) ? f : string.Empty;
+        var label = Str(component, "label");
+
+        <fieldset class="@Css("a2ui-choices", chips ? "a2ui-choices-chips" : "a2ui-choices-list")" style="@style" data-component-id="@component.Id">
+            @if (label.Length > 0)
+            {
+                <legend class="a2ui-label">@label</legend>
+            }
+            @if (filterable)
+            {
+                <input class="a2ui-input a2ui-filter" type="search" placeholder="Filter" value="@filter"
+                       @oninput="@(e => SetFilter(key, e.Value?.ToString()))" />
+            }
+            <div class="a2ui-options">
+                @foreach (var option in options)
+                {
+                    var optionValue = A2UIFunctions.Display(Owner.Surface.Resolve(Strathweb.A2UI.Values.DynamicValue.FromJson(option["value"]), Scope));
+                    var optionLabel = A2UIFunctions.Display(Owner.Surface.Resolve(Strathweb.A2UI.Values.DynamicValue.FromJson(option["label"]), Scope));
+                    if (filter.Length > 0 && !optionLabel.Contains(filter, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    var isSelected = selected.Contains(optionValue, StringComparer.Ordinal);
+                    if (chips)
+                    {
+                        <button type="button" class="@Css("a2ui-chip", isSelected ? "a2ui-chip-selected" : "")" aria-pressed="@(isSelected ? "true" : "false")"
+                                @onclick="@(() => Choose(component, selected, optionValue, multiple, !isSelected))">@optionLabel</button>
+                    }
+                    else
+                    {
+                        <label class="a2ui-option">
+                            <input type="@(multiple ? "checkbox" : "radio")" name="@("a2ui-" + key)" checked="@isSelected"
+                                   @onchange="@(e => Choose(component, selected, optionValue, multiple, e.Value is true || !multiple))" />
+                            <span>@optionLabel</span>
+                        </label>
+                    }
+                }
+            </div>
+            @RenderFailures(key)
+        </fieldset>
+    };
+
+    private RenderFragment RenderSlider(A2UIComponent component, string key, string? style) => __builder =>
+    {
+        var min = Owner.Surface.ResolveNumber(component, "min", Scope) ?? 0;
+        var max = Owner.Surface.ResolveNumber(component, "max", Scope) ?? 100;
+        var value = Owner.Surface.ResolveNumber(component, "value", Scope) ?? min;
+        var inputId = InputId(key);
+        var label = Str(component, "label");
+
+        <div class="a2ui-field a2ui-slider" style="@style" data-component-id="@component.Id">
+            @if (label.Length > 0)
+            {
+                <label class="a2ui-label" for="@inputId">@label</label>
+            }
+            <div class="a2ui-slider-row">
+                <input id="@inputId" type="range" min="@Inv(min)" max="@Inv(max)" value="@Inv(value)"
+                       @onchange="@(e => Owner.SetValue(component, "value", JsonValue.Create(ParseNumber(e.Value, min)), Scope))" />
+                <output class="a2ui-slider-value">@Inv(value)</output>
+            </div>
+            @RenderFailures(key)
+        </div>
+    };
+
+    private RenderFragment RenderDateTimeInput(A2UIComponent component, string key, string? style) => __builder =>
+    {
+        var date = Owner.Surface.ResolveBoolean(component, "enableDate", Scope);
+        var time = Owner.Surface.ResolveBoolean(component, "enableTime", Scope);
+        var type = (date, time) switch
+        {
+            (true, true) => "datetime-local",
+            (false, true) => "time",
+            _ => "date",
+        };
+        var inputId = InputId(key);
+        var label = Str(component, "label");
+
+        <div class="a2ui-field" style="@style" data-component-id="@component.Id">
+            @if (label.Length > 0)
+            {
+                <label class="a2ui-label" for="@inputId">@label</label>
+            }
+            <input id="@inputId" class="a2ui-input" type="@type" value="@Str(component, "value")"
+                   min="@Str(component, "min")" max="@Str(component, "max")"
+                   @onchange="@(e => Owner.SetValue(component, "value", JsonValue.Create(e.Value?.ToString()), Scope))" />
+            @RenderFailures(key)
+        </div>
+    };
+}

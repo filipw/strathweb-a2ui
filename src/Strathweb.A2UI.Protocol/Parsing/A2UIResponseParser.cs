@@ -17,7 +17,19 @@ public static class A2UIResponseParser
     /// <exception cref="A2UIParseException">
     /// The response contains no A2UI block, a block is empty, or a block is not valid JSON.
     /// </exception>
-    public static IReadOnlyList<A2UIResponsePart> Parse(string response)
+    public static IReadOnlyList<A2UIResponsePart> Parse(string response) => Parse(response, repair: false);
+
+    /// <summary>Parses a response, optionally repairing each block first.</summary>
+    /// <param name="response">The model's output.</param>
+    /// <param name="repair">
+    /// Whether to run each block through <see cref="A2UIPayloadRepair"/> before parsing it, so
+    /// trailing commas, typographic quotes and a missing array wrapper do not fail the response.
+    /// </param>
+    /// <returns>The parts in order, as for <see cref="Parse(string)"/>.</returns>
+    /// <exception cref="A2UIParseException">
+    /// The response contains no A2UI block, a block is empty, or a block is not valid JSON.
+    /// </exception>
+    public static IReadOnlyList<A2UIResponsePart> Parse(string response, bool repair)
     {
         Throw.IfNull(response, nameof(response));
 
@@ -44,9 +56,10 @@ public static class A2UIResponseParser
             }
 
             found = true;
+            var block = response.Substring(bodyStart, close - bodyStart);
             parts.Add(A2UIResponsePart.Create(
                 leadingText,
-                ParseBlock(response.Substring(bodyStart, close - bodyStart))));
+                repair ? A2UIPayloadRepair.Fix(block) : ParseBlock(block)));
 
             position = close + A2UIResponseTags.Close.Length;
         }
@@ -106,7 +119,7 @@ public static class A2UIResponseParser
 
             // A single message without its wrapping array is a common model slip and costs nothing
             // to accept; the wire format itself always uses an array.
-            JsonObject obj => [obj],
+            JsonObject obj => new JsonArray(obj),
             _ => throw new A2UIParseException("Failed to parse the A2UI JSON block: expected an array of messages."),
         };
     }

@@ -3,10 +3,16 @@
     <Project Path="src/Strathweb.A2UI.Protocol/Strathweb.A2UI.Protocol.csproj" />
     <Project Path="src/Strathweb.A2UI.A2A/Strathweb.A2UI.A2A.csproj" />
     <Project Path="src/Strathweb.A2UI.AgentFramework/Strathweb.A2UI.AgentFramework.csproj" />
+    <Project Path="src/Strathweb.A2UI.Rendering/Strathweb.A2UI.Rendering.csproj" />
+    <Project Path="src/Strathweb.A2UI.Blazor/Strathweb.A2UI.Blazor.csproj" />
   </Folder>
   <Folder Name="/samples/">
     <Project Path="samples/CoffeeShop/CoffeeShop.csproj" />
     <Project Path="samples/SurveyAgent/SurveyAgent.csproj" />
+    <Project Path="samples/Shared/Strathweb.A2UI.Samples.Shared/Strathweb.A2UI.Samples.Shared.csproj" />
+    <Project Path="samples/StreamingChat/StreamingChat.csproj" />
+    <Project Path="samples/BookingWizard/BookingWizard.csproj" />
+    <Project Path="samples/GenerativeDashboard/GenerativeDashboard.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Strathweb.A2UI.Protocol.UnitTests/Strathweb.A2UI.Protocol.UnitTests.csproj" />
@@ -14,6 +20,8 @@
     <Project Path="tests/Strathweb.A2UI.A2A.UnitTests/Strathweb.A2UI.A2A.UnitTests.csproj" />
     <Project Path="tests/Strathweb.A2UI.AgentFramework.UnitTests/Strathweb.A2UI.AgentFramework.UnitTests.csproj" />
     <Project Path="tests/Strathweb.A2UI.IntegrationTests/Strathweb.A2UI.IntegrationTests.csproj" />
+    <Project Path="tests/Strathweb.A2UI.Rendering.UnitTests/Strathweb.A2UI.Rendering.UnitTests.csproj" />
+    <Project Path="tests/Strathweb.A2UI.Blazor.UnitTests/Strathweb.A2UI.Blazor.UnitTests.csproj" />
     <Project Path="tests/Strathweb.A2UI.TrimTest/Strathweb.A2UI.TrimTest.csproj" />
   </Folder>
 </Solution>

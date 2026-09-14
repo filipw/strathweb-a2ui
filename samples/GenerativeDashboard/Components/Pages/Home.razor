@@ -1,0 +1,17 @@
+@page "/"
+@inject SampleInfo Info
+
+<PageTitle>Generative dashboard</PageTitle>
+
+<SampleShell Title="Generative dashboard"
+             Lead="Prompt-first A2UI: the model writes the surface as JSON inside <a2ui-json> tags. The agent parses it while it streams, validates it against the Basic Catalog, and when the model gets it wrong, sends the errors back and shows the repaired version. The prompt it works from is at /prompt."
+             ModelNote="@Info.ModelNote">
+    <ChildContent>
+        <ChatPanel Suggestions="@(new[] { "Show Q3 sales by region", "Show a broken dashboard so I can watch the repair" })"
+                   Placeholder="Ask about sales…"
+                   EmptyText="Ask for a dashboard. Then press Refresh on it, or ask for a broken one." />
+    </ChildContent>
+    <Aside>
+        <WireLog Title="Wire and library log" />
+    </Aside>
+</SampleShell>

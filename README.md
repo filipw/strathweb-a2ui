@@ -17,7 +17,9 @@ Targets A2UI **v0.9.1**. v1.0 is a release candidate upstream and is not impleme
 |---|---|---|
 | `Strathweb.A2UI.Protocol` | Messages, components, catalogs, validator, parser, surface builder | BCL only |
 | `Strathweb.A2UI.A2A` | Data parts, agent card advertisement, capability metadata | `A2A` |
-| `Strathweb.A2UI.AgentFramework` | Emit surfaces from tools, read actions back | `Microsoft.Agents.AI.Abstractions` |
+| `Strathweb.A2UI.AgentFramework` | Emit surfaces from tools, read actions back, prompt-first generation | `Microsoft.Agents.AI.Abstractions` |
+| `Strathweb.A2UI.Rendering` | Renderer-side state: bindings, templates, catalog functions, checks, actions | BCL only |
+| `Strathweb.A2UI.Blazor` | `A2UISurfaceView`, a Blazor component that draws a surface | `Microsoft.AspNetCore.Components.Web` |
 
 ## Usage
 
@@ -57,6 +59,14 @@ app.MapA2AJsonRpc(agent, "/a2a");
 The surface leaves as an `application/a2ui+json` data part. The user's answer arrives on a later turn
 as an `ActionMessage` on `A2UIRunContext.Actions`, and as a plain sentence for the model.
 
+Or let the model write the surface itself. `A2UISystemPrompt.Generate` builds the system prompt from
+the catalog, and `PromptFirst` turns the `<a2ui-json>` blocks in the reply into surfaces, validated
+against the catalog and sent back to the model for repair when they are wrong. See
+[prompt-first generation](docs/prompt-first.md).
+
+On the other side of the wire, `Strathweb.A2UI.Blazor` draws the surfaces in a Blazor page. See
+[rendering in .NET](docs/rendering.md).
+
 ## What it handles
 
 - Component ids. A surface is a flat adjacency list; one wrong id renders blank with no error. You
@@ -74,12 +84,12 @@ as an `ActionMessage` on `A2UIRunContext.Actions`, and as a plain sentence for t
 The specification and its conformance suite are vendored under [`spec/`](spec/) at a pinned commit
 and are the source of truth for this repository.
 
-38 of the 206 vendored cases run and pass: every runnable v0.9 validator case, every `parse_full`
-case, and the A2A extension cases for parts and negotiation. The other 168 are skipped with a stated
-reason, and the test run fails if a case is neither run nor accounted for. The largest groups are 77
-v0.8 cases, 38 `process_chunk` cases (progressive rendering that exists in the reference SDK rather
-than the specification), and agent-SDK features this library does not provide. CI publishes the
-breakdown as an artifact.
+58 of the 206 vendored cases run and pass: every runnable v0.9 validator case, every `parse_full`,
+`fix_payload`, `select_catalog` and `load_catalog` case, the v0.9 `generate_prompt` cases, and the A2A
+extension cases for parts and negotiation. The other 148 are skipped with a stated reason, and the
+test run fails if a case is neither run nor accounted for. The largest groups are 86 v0.8 cases and 38
+`process_chunk` cases (progressive rendering that exists in the reference SDK rather than the
+specification). CI publishes the breakdown as an artifact.
 
 Every emitted message is additionally validated against the vendored JSON Schemas in tests, including
 all 24 worked examples the specification ships.
@@ -89,11 +99,17 @@ all 24 worked examples the specification ships.
 - [Getting started](docs/getting-started.md)
 - [Authoring surfaces](docs/surfaces.md)
 - [Actions](docs/actions.md)
+- [Prompt-first generation](docs/prompt-first.md)
+- [Rendering in .NET](docs/rendering.md)
 - [Protocol versions](docs/versioning.md)
 - [Conformance and scope](docs/conformance.md)
 - [samples/CoffeeShop](samples/CoffeeShop), an agent plus a browser front end using the official
   `@a2ui/lit` renderer
 - [samples/SurveyAgent](samples/SurveyAgent), the server side on its own
+- [samples/StreamingChat](samples/StreamingChat), a chat page over `message/stream` drawn by the Blazor
+  renderer, with a form painted mid-reply
+- [samples/BookingWizard](samples/BookingWizard), a three-step form on one surface
+- [samples/GenerativeDashboard](samples/GenerativeDashboard), the model writes the surface itself
 
 ## Building
 

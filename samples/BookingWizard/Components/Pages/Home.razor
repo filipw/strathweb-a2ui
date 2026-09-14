@@ -1,0 +1,17 @@
+@page "/"
+@inject SampleInfo Info
+
+<PageTitle>Table booking</PageTitle>
+
+<SampleShell Title="Multi-step form"
+             Lead="A three-step booking on one surface. Each step swaps its components in by id with updateComponents, the client-side checks stop you moving on with a field missing, the review step uses Tabs, a Modal and formatString, and the agent reads your answers back out of the data model."
+             ModelNote="@Info.ModelNote">
+    <ChildContent>
+        <ChatPanel Suggestions="@(new[] { "Book a table" })"
+                   Placeholder="Say anything to begin, or use the form."
+                   EmptyText="Send a message to open the booking form." />
+    </ChildContent>
+    <Aside>
+        <WireLog />
+    </Aside>
+</SampleShell>

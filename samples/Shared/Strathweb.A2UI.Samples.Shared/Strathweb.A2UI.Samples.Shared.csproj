@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Strathweb.A2UI.Samples</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsShippingProject>false</IsShippingProject>
+    <IsSampleProject>true</IsSampleProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Strathweb.A2UI.AgentFramework\Strathweb.A2UI.AgentFramework.csproj" />
+    <ProjectReference Include="..\..\..\src\Strathweb.A2UI.Blazor\Strathweb.A2UI.Blazor.csproj" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
+    <PackageReference Include="OpenAI" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+</Project>

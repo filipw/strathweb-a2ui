@@ -164,6 +164,118 @@ public sealed class A2UICatalog
     public JsonObject ToJson() => (JsonObject)Source.DeepClone();
 
     /// <summary>
+    /// Returns a copy that also defines another catalog's components. A component defined in both is
+    /// taken from <paramref name="other"/>. The id, functions and everything else stay this catalog's.
+    /// </summary>
+    /// <param name="other">The catalog whose components to add, typically one a renderer sent inline.</param>
+    /// <returns>A new catalog.</returns>
+    public A2UICatalog WithComponentsFrom(A2UICatalog other)
+    {
+        Throw.IfNull(other, nameof(other));
+
+        var source = (JsonObject)Source.DeepClone();
+        var components = source["components"] as JsonObject ?? [];
+        source["components"] = components;
+
+        foreach (var pair in other.Components)
+        {
+            components[pair.Key] = pair.Value?.DeepClone();
+        }
+
+        return Derive(source);
+    }
+
+    /// <summary>
+    /// Returns a copy that defines only the named components, for offering a model a smaller set than
+    /// the catalog has. Names the catalog does not define are ignored.
+    /// </summary>
+    /// <param name="componentNames">The components to keep.</param>
+    /// <returns>A new catalog.</returns>
+    public A2UICatalog WithOnlyComponents(IEnumerable<string> componentNames)
+    {
+        Throw.IfNull(componentNames, nameof(componentNames));
+
+        var keep = new HashSet<string>(componentNames, StringComparer.Ordinal);
+        var source = (JsonObject)Source.DeepClone();
+        var components = new JsonObject();
+
+        foreach (var pair in Components)
+        {
+            if (keep.Contains(pair.Key))
+            {
+                components[pair.Key] = pair.Value?.DeepClone();
+            }
+        }
+
+        source["components"] = components;
+        return Derive(source);
+    }
+
+    /// <summary>
+    /// Returns a copy with every <c>additionalProperties: false</c> and
+    /// <c>unevaluatedProperties: false</c> removed, so a schema-driven validator tolerates properties
+    /// the catalog does not declare. Structural validation in this library is unaffected.
+    /// </summary>
+    /// <returns>A new catalog.</returns>
+    public A2UICatalog WithoutStrictValidation()
+    {
+        var source = (JsonObject)Source.DeepClone();
+        RemoveStrictKeywords(source);
+        return Derive(source);
+    }
+
+    private A2UICatalog Derive(JsonObject source) =>
+        new(source, CatalogId) { Instructions = Instructions, ReferenceDocuments = ReferenceDocuments };
+
+    private static void RemoveStrictKeywords(JsonNode? node)
+    {
+        // Iterative: catalogs nest deeply and a generated one could nest deeper.
+        var stack = new Stack<JsonNode>();
+        if (node is not null)
+        {
+            stack.Push(node);
+        }
+
+        while (stack.Count > 0)
+        {
+            switch (stack.Pop())
+            {
+                case JsonObject obj:
+                    foreach (var keyword in StrictKeywords)
+                    {
+                        if (obj[keyword] is JsonValue value && value.TryGetValue<bool>(out var strict) && !strict)
+                        {
+                            obj.Remove(keyword);
+                        }
+                    }
+
+                    foreach (var pair in obj)
+                    {
+                        if (pair.Value is not null)
+                        {
+                            stack.Push(pair.Value);
+                        }
+                    }
+
+                    break;
+
+                case JsonArray array:
+                    foreach (var item in array)
+                    {
+                        if (item is not null)
+                        {
+                            stack.Push(item);
+                        }
+                    }
+
+                    break;
+            }
+        }
+    }
+
+    private static readonly string[] StrictKeywords = ["additionalProperties", "unevaluatedProperties"];
+
+    /// <summary>
     /// Rewrites the array-of-objects <c>functions</c> encoding used by inline catalogs in A2A
     /// capabilities into the name-keyed map a catalog document uses, so callers see one shape.
     /// </summary>

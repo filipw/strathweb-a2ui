@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>GenerativeDashboard</RootNamespace>
+    <UserSecretsId>strathweb-a2ui-generative-dashboard</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shared\Strathweb.A2UI.Samples.Shared\Strathweb.A2UI.Samples.Shared.csproj" />
+    <PackageReference Include="Microsoft.Agents.AI" />
+    <PackageReference Include="Microsoft.Agents.AI.Hosting.A2A.AspNetCore" />
+  </ItemGroup>
+
+</Project>

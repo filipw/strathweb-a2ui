@@ -52,4 +52,19 @@ internal static partial class A2UILog
         string? catalogId,
         string supported,
         A2UIUnsupportedCatalogPolicy policy);
+
+    [LoggerMessage(EventId = 30, Level = LogLevel.Debug, Message = "The model wrote a valid A2UI block of {MessageCount} message(s).")]
+    internal static partial void GeneratedBlockAccepted(this ILogger logger, int messageCount);
+
+    [LoggerMessage(EventId = 31, Level = LogLevel.Warning, Message = "The model wrote an A2UI block that failed validation: {Errors}")]
+    internal static partial void GeneratedBlockInvalid(this ILogger logger, string errors);
+
+    [LoggerMessage(EventId = 32, Level = LogLevel.Warning, Message = "The model wrote an A2UI block that could not be read: {Reason}")]
+    internal static partial void GeneratedBlockUnreadable(this ILogger logger, string reason);
+
+    [LoggerMessage(EventId = 33, Level = LogLevel.Information, Message = "Asking the model to repair its A2UI block, attempt {Attempt} of {Max}.")]
+    internal static partial void GeneratedRepairRequested(this ILogger logger, int attempt, int max);
+
+    [LoggerMessage(EventId = 34, Level = LogLevel.Warning, Message = "{Count} A2UI block(s) the model wrote were dropped after every repair attempt.")]
+    internal static partial void GeneratedBlocksDropped(this ILogger logger, int count);
 }

@@ -4,17 +4,21 @@ The A2UI specification and its conformance suite are vendored under [`spec/`](..
 in `spec/SPEC_VERSION`, and are the source of truth for this repository. `scripts/verify-spec.sh`
 fails if anything there has been hand-edited.
 
-38 of the 206 vendored cases run against this implementation and pass:
+58 of the 206 vendored cases run against this implementation and pass:
 
-| Action | Cases |
-|---|---|
-| `validate` | 19 |
-| `parse_full` | 9 |
-| `has_parts` | 3 |
-| `try_activate`, `try_activate_extension` | 4 |
-| `create_a2ui_part`, `is_a2ui_part`, `select_newest` | 3 |
+| Action | Cases | Runs against |
+|---|---|---|
+| `validate` | 19 | `A2UIValidator` |
+| `parse_full` | 9 | `A2UIResponseParser` |
+| `fix_payload` | 7 | `A2UIPayloadRepair` |
+| `select_catalog` | 8 | `A2UICatalogSelector` |
+| `load_catalog` | 3 | `A2UICatalog.Load`, `WithoutStrictValidation` |
+| `generate_prompt` | 2 | `A2UISystemPrompt` |
+| `has_parts` | 3 | `A2UIResponseParser.ContainsA2UIBlock` |
+| `try_activate`, `try_activate_extension` | 4 | `A2UIExtensionUris` |
+| `create_a2ui_part`, `is_a2ui_part`, `select_newest` | 3 | `A2UIParts`, `A2UIExtensionUris` |
 
-The other 168 are skipped with a stated reason. A case that is neither run nor accounted for fails the
+The other 148 are skipped with a stated reason. A case that is neither run nor accounted for fails the
 test run, and the full breakdown is written to `conformance-coverage.md` and published by CI.
 
 Every message the library emits is additionally validated against the vendored JSON Schemas in tests,
@@ -22,7 +26,8 @@ including all 24 worked examples the specification ships.
 
 ## What is not implemented
 
-**v0.8** (77 cases). Not a supported protocol version.
+**v0.8** (86 cases). Not a supported protocol version. This includes the six `generate_prompt` and
+three `get_extension` cases whose `args.version` is 0.8.
 
 **v1.0** (4 cases). A release candidate upstream. `A2UIVersionProfile` exists so it can be added
 without restructuring; see [versioning](versioning.md).
@@ -34,10 +39,9 @@ not appear in the specification. `A2UIStreamParser` separates prose from A2UI bl
 message as its closing brace arrives, at any chunk boundary, which is what the `parse_full` cases
 describe.
 
-**Agent SDK features** (`generate_prompt`, `select_catalog`, `fix_payload`, `prune`, `render`,
-`convert_event`, `load_catalog`, `execute_tool`, `handle_rpc`, `get_extension`,
-`verify_cuttable_keys`). Catalog-constrained generation and payload repair are not part of this
-library.
+**Reference-SDK internals** (`prune`, `render`, `convert_event`, `execute_tool`, `handle_rpc`,
+`verify_cuttable_keys`). Schema pruning, ADK event conversion and the reference RPC handler have no
+counterpart here.
 
 ## Deliberate limits
 

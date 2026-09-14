@@ -13,8 +13,16 @@ internal sealed class ConformanceCase(string file, JsonObject source)
 
     internal string Action => (string?)Source["action"] ?? "(none)";
 
-    /// <summary>The protocol version the case targets, or <see langword="null"/> when it is version-agnostic.</summary>
-    internal string? Version => (string?)(Source["catalog"] as JsonObject)?["version"];
+    /// <summary>
+    /// The protocol version the case targets, or <see langword="null"/> when it is version-agnostic.
+    /// Validator cases carry it under <c>catalog</c>; prompt cases under <c>args</c>.
+    /// </summary>
+    internal string? Version =>
+        (string?)(Source["catalog"] as JsonObject)?["version"] ??
+        (string?)(Source["args"] as JsonObject)?["version"];
+
+    /// <summary>The <c>args</c> object, empty when the case has none.</summary>
+    internal JsonObject Args => Source["args"] as JsonObject ?? [];
 
     internal JsonNode? CatalogSchema => (Source["catalog"] as JsonObject)?["catalog_schema"];
 

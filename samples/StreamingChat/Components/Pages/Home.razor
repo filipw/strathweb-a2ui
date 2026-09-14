@@ -1,0 +1,17 @@
+@page "/"
+@inject SampleInfo Info
+
+<PageTitle>Trip planner</PageTitle>
+
+<SampleShell Title="Streaming chat with a live renderer"
+             Lead="The agent streams its words token by token over A2A message/stream. When it calls a tool that shows a form, the surface paints in the middle of the reply, drawn by the Blazor renderer. Submit the form and the answers come back as an A2UI action."
+             ModelNote="@Info.ModelNote">
+    <ChildContent>
+        <ChatPanel Suggestions="@(new[] { "Plan a weekend in Lisbon", "I want to visit Kyoto in spring", "Plan a trip to Reykjavik" })"
+                   Placeholder="Where would you like to go?"
+                   EmptyText="Ask for a trip and watch the reply stream in." />
+    </ChildContent>
+    <Aside>
+        <WireLog />
+    </Aside>
+</SampleShell>

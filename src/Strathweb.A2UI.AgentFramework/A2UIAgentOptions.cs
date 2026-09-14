@@ -30,6 +30,12 @@ public sealed class A2UIAgentOptions
     public A2UIInboundLimits InboundLimits { get; set; } = new();
 
     /// <summary>
+    /// Turns on prompt-first generation: A2UI blocks the model writes in its replies become surfaces.
+    /// <see langword="null"/>, the default, leaves the model's text alone.
+    /// </summary>
+    public A2UIPromptFirstOptions? PromptFirst { get; set; }
+
+    /// <summary>
     /// Where to log. When <see langword="null"/>, the wrapped agent is asked for an
     /// <see cref="ILoggerFactory"/> through <c>GetService</c>, and nothing is logged if it has none.
     /// </summary>

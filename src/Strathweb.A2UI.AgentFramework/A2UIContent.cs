@@ -26,6 +26,7 @@ public sealed class A2UIContent : AIContent
         ArgumentNullException.ThrowIfNull(messages);
 
         Messages = messages;
+        SurfaceId = CreatedSurfaceId(messages);
 
         // Must be set here, not lazily. A2A's ToPart() returns RawRepresentation unchanged when it
         // already holds a Part, and maps nothing else usable; built later, the surface is dropped.
@@ -55,7 +56,7 @@ public sealed class A2UIContent : AIContent
         }
 
         Messages = A2UIJson.ListFromJsonNode(JsonNode.Parse(payload.GetRawText()));
-        SurfaceId = surfaceId;
+        SurfaceId = surfaceId ?? CreatedSurfaceId(Messages);
 
         var part = A2UIParts.Create(Messages);
         RawRepresentation = part;
@@ -69,7 +70,7 @@ public sealed class A2UIContent : AIContent
     /// <summary>The messages as the JSON array an A2A data part carries. This is what is serialized.</summary>
     public JsonElement Payload { get; }
 
-    /// <summary>The surface these messages build, when they came from one.</summary>
+    /// <summary>The surface these messages create, when one of them is a <c>createSurface</c>.</summary>
     public string? SurfaceId { get; }
 
     /// <summary>The A2A data part this content travels as.</summary>
@@ -80,5 +81,18 @@ public sealed class A2UIContent : AIContent
     {
         ArgumentNullException.ThrowIfNull(surface);
         return surface.Messages;
+    }
+
+    private static string? CreatedSurfaceId(IReadOnlyList<A2UIMessage> messages)
+    {
+        foreach (var message in messages)
+        {
+            if (message is CreateSurfaceMessage create)
+            {
+                return create.SurfaceId;
+            }
+        }
+
+        return null;
     }
 }

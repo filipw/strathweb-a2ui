@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <RootNamespace>Strathweb.A2UI.Rendering</RootNamespace>
+    <Description>Renderer-side A2UI runtime for .NET: surface state, data binding, templates, the Basic Catalog functions, client-side checks and action dispatch. UI-framework agnostic; Strathweb.A2UI.Blazor draws it.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Strathweb.A2UI.Protocol\Strathweb.A2UI.Protocol.csproj" />
+  </ItemGroup>
+
+</Project>

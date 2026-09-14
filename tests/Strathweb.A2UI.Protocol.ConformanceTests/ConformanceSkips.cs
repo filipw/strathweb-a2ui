@@ -14,6 +14,10 @@ internal static class ConformanceSkips
         "try_activate",
         "try_activate_extension",
         "select_newest",
+        "fix_payload",
+        "select_catalog",
+        "generate_prompt",
+        "load_catalog",
     };
 
     internal static string? Reason(ConformanceCase testCase)

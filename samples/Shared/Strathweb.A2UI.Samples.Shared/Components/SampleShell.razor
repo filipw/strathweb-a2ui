@@ -1,0 +1,36 @@
+<div class="shell">
+    <header class="shell-header">
+        <div>
+            <div class="shell-eyebrow">A2UI for .NET · sample</div>
+            <h1>@Title</h1>
+            <p class="shell-lead">@Lead</p>
+        </div>
+        <p class="shell-model">@ModelNote</p>
+    </header>
+    <main class="shell-main">
+        <div class="shell-chat">@ChildContent</div>
+        <aside class="shell-aside">@Aside</aside>
+    </main>
+</div>
+
+@code {
+    /// <summary>The sample's name.</summary>
+    [Parameter]
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>One sentence on what the sample shows.</summary>
+    [Parameter]
+    public string Lead { get; set; } = string.Empty;
+
+    /// <summary>Which model is in use.</summary>
+    [Parameter]
+    public string ModelNote { get; set; } = string.Empty;
+
+    /// <summary>The chat.</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>The right-hand column, usually the wire log.</summary>
+    [Parameter]
+    public RenderFragment? Aside { get; set; }
+}

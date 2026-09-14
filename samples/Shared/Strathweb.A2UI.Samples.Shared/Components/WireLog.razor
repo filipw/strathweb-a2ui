@@ -1,0 +1,50 @@
+@implements IDisposable
+@inject A2UIChatSession Session
+@inject DemoLogProvider Logs
+
+<section class="wire">
+    <h2>@Title</h2>
+    <ol class="wire-entries">
+        @foreach (var entry in Merged())
+        {
+            <li class="@("wire-" + entry.Kind)">
+                <span class="wire-time">@entry.At.ToString("HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture)</span>
+                <span class="wire-kind">@Label(entry.Kind)</span>
+                <span class="wire-text">@entry.Text</span>
+            </li>
+        }
+    </ol>
+</section>
+
+@code {
+    /// <summary>The panel heading.</summary>
+    [Parameter]
+    public string Title { get; set; } = "Wire log";
+
+    protected override void OnInitialized()
+    {
+        Session.Changed += OnChanged;
+        Logs.Logged += OnLogged;
+    }
+
+    private IEnumerable<WireLogEntry> Merged() =>
+        Session.Wire.Concat(Logs.Entries).OrderByDescending(e => e.At).Take(40);
+
+    private static string Label(string kind) => kind switch
+    {
+        "out" => "→ agent",
+        "in" => "← agent",
+        "err" => "warning",
+        _ => "library",
+    };
+
+    private void OnChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private void OnLogged(WireLogEntry entry) => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Session.Changed -= OnChanged;
+        Logs.Logged -= OnLogged;
+    }
+}

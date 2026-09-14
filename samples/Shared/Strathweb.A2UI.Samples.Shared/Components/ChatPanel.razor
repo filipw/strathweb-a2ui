@@ -1,0 +1,90 @@
+@implements IDisposable
+@inject A2UIChatSession Session
+
+<div class="chat">
+    <div class="transcript">
+        @if (Session.Transcript.Count == 0)
+        {
+            <p class="chat-empty">@EmptyText</p>
+        }
+        @foreach (var entry in Session.Transcript)
+        {
+            <div class="@("entry entry-" + entry.Role)">
+                @if (entry.Text.Length > 0)
+                {
+                    <div class="bubble">@entry.Text</div>
+                }
+                @foreach (var surface in entry.Surfaces)
+                {
+                    <div class="surface-slot" @key="surface.SurfaceId">
+                        <A2UISurfaceView Surface="surface" OnAction="Session.SendActionAsync" OnOpenUrl="OpenUrl" />
+                    </div>
+                }
+            </div>
+        }
+        @if (Session.IsBusy)
+        {
+            <div class="typing" aria-live="polite">Agent is replying…</div>
+        }
+        @if (Session.Error is { } error)
+        {
+            <div class="chat-error" role="alert">@error</div>
+        }
+    </div>
+
+    @if (Suggestions.Length > 0)
+    {
+        <div class="suggestions">
+            @foreach (var suggestion in Suggestions)
+            {
+                <button type="button" class="suggestion" disabled="@Session.IsBusy" @onclick="() => SendAsync(suggestion)">@suggestion</button>
+            }
+        </div>
+    }
+
+    <form class="composer" @onsubmit="SubmitAsync">
+        <input class="composer-input" placeholder="@Placeholder" @bind="draft" @bind:event="oninput" disabled="@Session.IsBusy" />
+        <button type="submit" class="composer-send" disabled="@(Session.IsBusy || string.IsNullOrWhiteSpace(draft))">Send</button>
+    </form>
+</div>
+
+@code {
+    private string draft = string.Empty;
+
+    /// <summary>Quick replies shown above the composer.</summary>
+    [Parameter]
+    public string[] Suggestions { get; set; } = [];
+
+    /// <summary>The composer's placeholder text.</summary>
+    [Parameter]
+    public string Placeholder { get; set; } = "Say something…";
+
+    /// <summary>What the empty transcript says.</summary>
+    [Parameter]
+    public string EmptyText { get; set; } = "Start the conversation below.";
+
+    [Inject]
+    private NavigationManager Navigation { get; set; } = default!;
+
+    protected override void OnInitialized() => Session.Changed += OnChanged;
+
+    private void OnChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private async Task SubmitAsync()
+    {
+        var text = draft.Trim();
+        if (text.Length == 0)
+        {
+            return;
+        }
+
+        draft = string.Empty;
+        await SendAsync(text);
+    }
+
+    private Task SendAsync(string text) => Session.SendTextAsync(text);
+
+    private void OpenUrl(Uri url) => Navigation.NavigateTo(url.ToString(), forceLoad: true);
+
+    public void Dispose() => Session.Changed -= OnChanged;
+}

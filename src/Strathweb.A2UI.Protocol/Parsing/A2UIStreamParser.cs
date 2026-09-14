@@ -10,13 +10,17 @@ namespace Strathweb.A2UI.Parsing;
 public sealed class A2UIStreamParser
 {
     private readonly StringBuilder pending = new();
-    private readonly JsonElementScanner scanner = new();
+    private readonly JsonElementScanner scanner;
 
     private bool insideBlock;
 
     /// <summary>Creates a parser.</summary>
     /// <param name="maxBufferLength">The largest amount of unyielded input to hold. Defaults to one mebibyte.</param>
-    public A2UIStreamParser(int maxBufferLength = 1024 * 1024)
+    /// <param name="repair">
+    /// Whether each completed message is run through <see cref="A2UIPayloadRepair"/> before parsing,
+    /// so a trailing comma or a typographic quote inside a message does not fail the stream.
+    /// </param>
+    public A2UIStreamParser(int maxBufferLength = 1024 * 1024, bool repair = false)
     {
         if (maxBufferLength <= 0)
         {
@@ -27,10 +31,15 @@ public sealed class A2UIStreamParser
         }
 
         MaxBufferLength = maxBufferLength;
+        Repair = repair;
+        scanner = new JsonElementScanner(repair);
     }
 
     /// <summary>The largest amount of unyielded input this parser will hold.</summary>
     public int MaxBufferLength { get; }
+
+    /// <summary>Whether completed messages are repaired before they are parsed.</summary>
+    public bool Repair { get; }
 
     /// <summary>Whether the parser is currently inside an A2UI block.</summary>
     public bool IsInsideA2UIBlock => insideBlock;
@@ -168,7 +177,7 @@ public sealed class A2UIStreamParser
     /// Tracks where one JSON value ends and the next begins inside a block, without parsing the value
     /// itself.
     /// </summary>
-    private sealed class JsonElementScanner
+    private sealed class JsonElementScanner(bool repair)
     {
         private int depth;
         private bool inString;
@@ -299,8 +308,18 @@ public sealed class A2UIStreamParser
             return consumed;
         }
 
-        private static JsonNode Parse(string json)
+        private JsonNode Parse(string json)
         {
+            if (repair)
+            {
+                // One message at a time, so the array wrapper Fix adds is unwrapped again. The node
+                // is detached first: a JsonNode cannot belong to two arrays.
+                var repaired = A2UIPayloadRepair.Fix(json);
+                var node = repaired[0]!;
+                repaired.RemoveAt(0);
+                return node;
+            }
+
             try
             {
                 return JsonNode.Parse(json)

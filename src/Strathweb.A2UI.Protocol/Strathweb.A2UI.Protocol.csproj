@@ -21,6 +21,8 @@
                       LogicalName="Strathweb.A2UI.Catalogs.v0_9_1.basic.rules.txt" />
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)..\..\spec\v0_9_1\json\common_types.json"
                       LogicalName="Strathweb.A2UI.Catalogs.v0_9_1.common_types.json" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)..\..\spec\v0_9_1\json\server_to_client.json"
+                      LogicalName="Strathweb.A2UI.Schemas.v0_9_1.server_to_client.json" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net10.0</TargetFrameworks>
+    <RootNamespace>Strathweb.A2UI.Rendering.UnitTests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Strathweb.A2UI.Rendering\Strathweb.A2UI.Rendering.csproj" />
+  </ItemGroup>
+
+</Project>

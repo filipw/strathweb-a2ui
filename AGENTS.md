@@ -13,8 +13,10 @@ House rules for working in this repository.
 ## Project discipline
 
 - `Strathweb.A2UI.Protocol` has zero non-BCL package references. Enforced by a test.
-- No shipping project references `Microsoft.Agents.AI.Hosting.*`, `Microsoft.AspNetCore.*`, `OpenAI`
-  or `AGUI.*`. Those appear only under `samples/` and `tests/`.
+- No shipping project references `Microsoft.Agents.AI.Hosting.*`, `OpenAI` or `AGUI.*`. Those appear
+  only under `samples/` and `tests/`. `Microsoft.AspNetCore.*` is referenced by exactly one shipping
+  project, `Strathweb.A2UI.Blazor`, which cannot exist without it; `Strathweb.A2UI.Rendering` stays
+  BCL-only so other UI stacks can build on it.
 - Central Package Management: versions go in `Directory.Packages.props`, never on a `PackageReference`.
 
 ## Code style
@@ -75,3 +77,9 @@ House rules for working in this repository.
 - The scripted test doubles run their callback before the first yield and keep no chat history.
   Anything that touches streaming or sessions also needs a test on `ToolCallingChatClient`, which
   streams text before the function call the way real providers do.
+- In a `.razor` file, markup is legal in the template and inside lambdas whose parameter is named
+  `__builder`, and nowhere else. A plain method in `@code` cannot contain markup.
+- The prompt-first stream parser tracks strings with straight quotes only. Repair happens per
+  completed message; a block whose JSON is unreadable is skipped to its closing tag and reported.
+- `A2UIContent` in a response is fine; `A2UIContent` in the chat history the inner agent stores is
+  not. Prompt-first surfaces go through the same `Attach` as tool surfaces for that reason.

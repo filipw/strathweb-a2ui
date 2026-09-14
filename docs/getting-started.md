@@ -60,5 +60,7 @@ Optional. A renderer can simply look for A2UI data parts coming back, but advert
 
 - [Authoring surfaces](surfaces.md)
 - [Actions](actions.md)
+- [Prompt-first generation](prompt-first.md), when the model should write the surface itself
+- [Rendering in .NET](rendering.md), for the Blazor side of the wire
 - [samples/SurveyAgent](../samples/SurveyAgent), which runs without a model key and serves the surface
   on its own for pasting into a renderer.
