@@ -18,7 +18,7 @@ public class ActionRoundTripTests
     private static readonly A2UICatalog Basic = A2UICatalogs.Basic(A2UIVersion.V0_9_1);
 
     [Fact]
-    public async Task AnActionPostedByTheRenderer_ReachesTheAgentAsStructuredContent()
+    public async Task AnActionPostedByTheRenderer_ReachesTheAgentOnTheRunContext()
     {
         var inner = SurveyInner();
         await using var host = await A2AHost.StartAsync(inner.WithA2UI());
@@ -26,13 +26,11 @@ public class ActionRoundTripTests
         await host.Client.SendMessageAsync(TextRequest("How did that go?"));
         await host.Client.SendMessageAsync(ActionRequest());
 
-        var action = Assert.Single(inner.LastMessages
-            .SelectMany(m => m.Contents)
-            .OfType<A2UIActionContent>());
+        var action = Assert.Single(inner.LastActions);
 
         Assert.Equal("submit_satisfaction", action.Name);
         Assert.Equal("satisfaction_1", action.SurfaceId);
-        Assert.Equal(5, (int)action.Action.Context["rating"]!);
+        Assert.Equal(5, (int)action.Context["rating"]!);
     }
 
     [Fact]
@@ -78,7 +76,7 @@ public class ActionRoundTripTests
 
         await host.Client.SendMessageAsync(ActionRequest(surfaceId: "some_other_surface"));
 
-        Assert.Single(inner.LastMessages.SelectMany(m => m.Contents).OfType<A2UIActionContent>());
+        Assert.Single(inner.LastActions);
     }
 
     private static ScriptedAgent SurveyInner() =>

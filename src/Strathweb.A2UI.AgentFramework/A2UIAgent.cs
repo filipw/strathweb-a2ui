@@ -1,5 +1,7 @@
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Strathweb.A2UI.Messages;
 
 namespace Strathweb.A2UI.AgentFramework;
@@ -9,6 +11,7 @@ public sealed class A2UIAgent : DelegatingAIAgent
 {
     private readonly A2UIAgentOptions agentOptions;
     private readonly A2UIInboundNormalizer normalizer;
+    private readonly ILogger logger;
 
     /// <summary>Wraps an agent.</summary>
     /// <param name="innerAgent">The agent to wrap.</param>
@@ -16,8 +19,16 @@ public sealed class A2UIAgent : DelegatingAIAgent
     public A2UIAgent(AIAgent innerAgent, A2UIAgentOptions? options = null)
         : base(innerAgent)
     {
+        ArgumentNullException.ThrowIfNull(innerAgent);
+
         agentOptions = options ?? new A2UIAgentOptions();
-        normalizer = new A2UIInboundNormalizer(agentOptions.Profile);
+
+        var loggerFactory = agentOptions.LoggerFactory
+            ?? innerAgent.GetService<ILoggerFactory>()
+            ?? NullLoggerFactory.Instance;
+
+        logger = loggerFactory.CreateLogger<A2UIAgent>();
+        normalizer = new A2UIInboundNormalizer(agentOptions.Profile, agentOptions.InboundLimits, logger);
     }
 
     /// <summary>The options this agent was configured with.</summary>
@@ -30,8 +41,8 @@ public sealed class A2UIAgent : DelegatingAIAgent
         AgentRunOptions? options = null,
         CancellationToken cancellationToken = default)
     {
-        var sink = new A2UISurfaceSink();
         var inbound = Receive(messages, session);
+        var sink = CreateSink(inbound);
 
         AgentResponse response;
         using (A2UIEmitter.BeginScope(sink))
@@ -47,7 +58,7 @@ public sealed class A2UIAgent : DelegatingAIAgent
             return response;
         }
 
-        Record(session, emitted);
+        Track(session, emitted);
         Attach(response, emitted);
         return response;
     }
@@ -59,28 +70,48 @@ public sealed class A2UIAgent : DelegatingAIAgent
         AgentRunOptions? options = null,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var sink = new A2UISurfaceSink();
         var inbound = Receive(messages, session);
+        var sink = CreateSink(inbound);
 
-        using var emitterScope = A2UIEmitter.BeginScope(sink);
-        using var inboundScope = A2UIRunContext.BeginScope(inbound);
+        // An AsyncLocal written inside an async iterator is reverted every time control returns to
+        // the consumer, so a scope opened once here would be gone by the time a tool runs after the
+        // first update. The scopes are re-entered around every step of the inner run instead.
+        var inner = base.RunCoreStreamingAsync(inbound.Messages, session, options, cancellationToken)
+            .GetAsyncEnumerator(cancellationToken);
 
-        await foreach (var update in base
-                           .RunCoreStreamingAsync(inbound.Messages, session, options, cancellationToken)
-                           .ConfigureAwait(false))
+        try
         {
-            yield return update;
-
-            if (!agentOptions.StreamSurfacesAsTheyAppear)
+            while (true)
             {
-                continue;
-            }
+                bool moved;
+                using (A2UIEmitter.BeginScope(sink))
+                using (A2UIRunContext.BeginScope(inbound))
+                {
+                    moved = await inner.MoveNextAsync().ConfigureAwait(false);
+                }
 
-            // A surface that is ready should be painted now, not after the model stops talking.
-            foreach (var content in Emit(session, sink.Drain()))
-            {
-                yield return content;
+                if (!moved)
+                {
+                    break;
+                }
+
+                yield return inner.Current;
+
+                if (!agentOptions.StreamSurfacesAsTheyAppear)
+                {
+                    continue;
+                }
+
+                // A surface that is ready should be painted now, not after the model stops talking.
+                foreach (var content in Emit(session, sink.Drain()))
+                {
+                    yield return content;
+                }
             }
+        }
+        finally
+        {
+            await inner.DisposeAsync().ConfigureAwait(false);
         }
 
         foreach (var content in Emit(session, sink.Drain()))
@@ -102,6 +133,9 @@ public sealed class A2UIAgent : DelegatingAIAgent
             : EmptyInbound(materialized);
     }
 
+    private A2UISurfaceSink CreateSink(A2UIInboundResult inbound) =>
+        new(inbound.RendererCapabilities, agentOptions.UnsupportedCatalogPolicy, logger);
+
     private static A2UIInboundResult EmptyInbound(IReadOnlyList<ChatMessage> messages) =>
         new(
             messages,
@@ -118,7 +152,7 @@ public sealed class A2UIAgent : DelegatingAIAgent
             yield break;
         }
 
-        Record(session, emitted);
+        Track(session, emitted);
 
         foreach (var content in emitted)
         {
@@ -126,30 +160,34 @@ public sealed class A2UIAgent : DelegatingAIAgent
         }
     }
 
+    /// <summary>
+    /// Adds the surfaces to the response as a message of their own. The inner agent has already put
+    /// its messages into the chat history it keeps in the session; adding to one of those would put
+    /// content the framework cannot serialize into every session store.
+    /// </summary>
     private static void Attach(AgentResponse response, IReadOnlyList<A2UIContent> emitted)
     {
-        var message = response.Messages.LastOrDefault(m => m.Role == ChatRole.Assistant);
-        if (message is null)
-        {
-            message = new ChatMessage(ChatRole.Assistant, (IList<AIContent>)[]);
-            response.Messages.Add(message);
-        }
+        var last = response.Messages.LastOrDefault(m => m.Role == ChatRole.Assistant);
 
-        foreach (var content in emitted)
+        response.Messages.Add(new ChatMessage(ChatRole.Assistant, (IList<AIContent>)[.. emitted])
         {
-            message.Contents.Add(content);
-        }
+            AuthorName = last?.AuthorName,
+            MessageId = Guid.NewGuid().ToString("N"),
+        });
     }
 
-    private void Record(AgentSession? session, IReadOnlyList<A2UIContent> emitted)
+    /// <summary>Logs what was sent and remembers the surfaces in the session, when there is one.</summary>
+    private void Track(AgentSession? session, IReadOnlyList<A2UIContent> emitted)
     {
-        if (session is null)
+        var registry = session?.GetA2UISurfaceRegistry();
+        if (registry is null)
         {
-            return;
+            logger.NoSession();
         }
-
-        var registry = session.GetA2UISurfaceRegistry();
-        registry.Capacity = agentOptions.SurfaceHistoryCapacity;
+        else
+        {
+            registry.Capacity = agentOptions.SurfaceHistoryCapacity;
+        }
 
         var now = DateTimeOffset.UtcNow;
         foreach (var content in emitted)
@@ -159,16 +197,29 @@ public sealed class A2UIAgent : DelegatingAIAgent
                 switch (message)
                 {
                     case CreateSurfaceMessage create:
-                        registry.Add(create.SurfaceId, create.CatalogId, now);
+                        logger.SurfaceCreated(create.SurfaceId, create.CatalogId);
+                        registry?.Add(create.SurfaceId, create.CatalogId, now);
                         break;
 
                     case DeleteSurfaceMessage delete:
-                        registry.Remove(delete.SurfaceId);
+                        logger.SurfaceDeleted(delete.SurfaceId);
+                        registry?.Remove(delete.SurfaceId);
+                        break;
+
+                    case UpdateComponentsMessage update:
+                        logger.MessageSent(message.Kind, update.SurfaceId);
+                        break;
+
+                    case UpdateDataModelMessage update:
+                        logger.MessageSent(message.Kind, update.SurfaceId);
                         break;
                 }
             }
         }
 
-        session.SetA2UISurfaceRegistry(registry);
+        if (registry is not null)
+        {
+            session!.SetA2UISurfaceRegistry(registry);
+        }
     }
 }

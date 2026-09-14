@@ -22,11 +22,14 @@ resolves bindings before sending, so the values are concrete.
 
 ## What the agent sees
 
-`WithA2UI()` turns each inbound A2UI part into two things: an `A2UIActionContent` for code, and a
-`TextContent` for the model reading *The user performed the "submit_satisfaction" action on surface
-survey_01j8x9, with rating="5", comment="fast fix".*
+`WithA2UI()` replaces each inbound A2UI part with a `TextContent` for the model reading *The user
+performed the "submit_satisfaction" action on surface survey_01j8x9, with rating="5", comment="fast
+fix".* The structured `ActionMessage` is on `A2UIRunContext.Actions` for code.
 
-Both matter. A raw JSON payload left in the conversation changes how the model writes.
+A raw JSON payload left in the conversation changes how the model writes, so the part itself is gone.
+Nothing but text goes into the message: the wrapped agent stores that message in the chat history it
+keeps in the session, and a content type the framework cannot serialize there breaks every session
+store on the next save.
 
 ```csharp
 foreach (var action in A2UIRunContext.Actions)
@@ -75,6 +78,32 @@ Per the specification a data model goes only to the agent that created the surfa
 this session did not create is dropped before it reaches your code, and the surface id is listed on
 `A2UIRunContext.Current.IgnoredSurfaceData`.
 
+## The renderer is not trusted
+
+Everything in an action's `context` and in a reported data model was produced by the client. Treat it
+like a form post: resolve prices, permissions and identifiers on the server, never from what came
+back. The CoffeeShop sample reads drink ids out of the reported basket and looks the prices up in its
+own menu.
+
+Inbound payloads are capped by `A2UIAgentOptions.InboundLimits`. A data part above `MaxPartBytes`
+(256 KiB) is reported to the model as ignored rather than read, a data model payload above
+`MaxDataModelBytes` (256 KiB) is dropped whole, and each value in the sentence the model reads is cut
+at `MaxDescribedValueLength` characters (500).
+
+## Logging
+
+A2UI fails silently by design: a surface from a catalog the renderer does not know renders blank, and
+a data model for a surface the agent does not recognise is discarded. `A2UIAgent` logs both, along
+with every surface created or deleted, every action and renderer error received, and every inbound
+part it could not read. Logging goes through `A2UIAgentOptions.LoggerFactory`, or the
+`ILoggerFactory` the wrapped agent exposes through `GetService`, under the category
+`Strathweb.A2UI.AgentFramework.A2UIAgent`.
+
+`A2UIAgentOptions.UnsupportedCatalogPolicy` decides what happens when a tool emits a surface from a
+catalog the renderer did not list in `a2uiClientCapabilities`. `Warn`, the default, sends it and logs.
+`Drop` keeps it off the wire. `Throw` makes `A2UIEmitter.Emit` throw `InvalidOperationException`, so
+the tool can fall back to text. Nothing is checked on a turn where the renderer sent no capabilities.
+
 ## Session state is required for any of this
 
 Which surfaces this session created is tracked in the agent session, so anything that spans turns
@@ -87,4 +116,9 @@ builder.Services.AddKeyedSingleton<AgentSessionStore>(agent.Name, new InMemoryAg
 builder.Services.AddA2AServer(agent);
 ```
 
-If `IgnoredSurfaceData` lists surfaces you know you created, this is why.
+A store serializes the session after every turn, including the chat history the wrapped agent keeps
+in it. That is why the surfaces and actions this library handles never enter that history as custom
+content.
+
+If `IgnoredSurfaceData` lists surfaces you know you created, this is why, and the warning logged for
+each of them says so.

@@ -1,6 +1,8 @@
 using System.Text.Json;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
+using Strathweb.A2UI.AgentFramework;
+using Strathweb.A2UI.Messages;
 
 namespace Strathweb.A2UI.IntegrationTests;
 
@@ -15,6 +17,9 @@ internal sealed class ScriptedAgent(Action<AgentSession?> run, string reply = "D
 
     /// <summary>The messages the agent was given on its most recent run.</summary>
     internal IReadOnlyList<ChatMessage> LastMessages { get; private set; } = [];
+
+    /// <summary>The actions the run context exposed on the most recent run.</summary>
+    internal IReadOnlyList<ActionMessage> LastActions { get; private set; } = [];
 
     protected override ValueTask<AgentSession> CreateSessionCoreAsync(CancellationToken cancellationToken = default) =>
         new(new ScriptedSession());
@@ -38,6 +43,7 @@ internal sealed class ScriptedAgent(Action<AgentSession?> run, string reply = "D
         CancellationToken cancellationToken = default)
     {
         LastMessages = [.. messages];
+        LastActions = A2UIRunContext.Actions;
         run(session);
         return Task.FromResult(new AgentResponse(new ChatMessage(ChatRole.Assistant, reply)));
     }
@@ -49,6 +55,7 @@ internal sealed class ScriptedAgent(Action<AgentSession?> run, string reply = "D
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         LastMessages = [.. messages];
+        LastActions = A2UIRunContext.Actions;
         run(session);
         await Task.Yield();
         yield return new AgentResponseUpdate(ChatRole.Assistant, reply);

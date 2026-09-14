@@ -11,4 +11,11 @@
     <PackageReference Include="JsonSchema.Net" />
   </ItemGroup>
 
+  <!-- The fake model and the capturing logger are shared with the integration tests, whose Web SDK
+       brings Microsoft.Extensions.Logging in implicitly; this keeps the shared files identical. -->
+  <ItemGroup>
+    <Compile Include="..\Shared\Agents\*.cs" LinkBase="Shared" />
+    <Using Include="Microsoft.Extensions.Logging" />
+  </ItemGroup>
+
 </Project>

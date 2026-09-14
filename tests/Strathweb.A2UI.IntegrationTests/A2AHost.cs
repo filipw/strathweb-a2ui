@@ -20,7 +20,7 @@ internal sealed class A2AHost : IAsyncDisposable
     /// <summary>The A2A client, pointed at the in-process server.</summary>
     internal A2AClient Client { get; }
 
-    internal static async Task<A2AHost> StartAsync(AIAgent agent)
+    internal static async Task<A2AHost> StartAsync(AIAgent agent, Action<IServiceCollection>? configureServices = null)
     {
         var host = new HostBuilder()
             .ConfigureWebHost(web => web
@@ -28,6 +28,7 @@ internal sealed class A2AHost : IAsyncDisposable
                 .ConfigureServices(services =>
                 {
                     services.AddRouting();
+                    configureServices?.Invoke(services);
                     services.AddA2AServer(agent);
                 })
                 .Configure(app => app.UseRouting().UseEndpoints(endpoints =>

@@ -1,24 +1,12 @@
-using Strathweb.A2UI.Catalogs;
+using Microsoft.Extensions.Logging;
 
 namespace Strathweb.A2UI.AgentFramework;
 
 /// <summary>How an agent should handle A2UI.</summary>
 public sealed class A2UIAgentOptions
 {
-    /// <summary>The protocol version to emit. Defaults to v0.9.1.</summary>
+    /// <summary>The protocol version whose metadata keys and rules apply. Defaults to v0.9.1.</summary>
     public A2UIVersion Version { get; set; } = A2UIVersion.V0_9_1;
-
-    /// <summary>
-    /// The catalog surfaces are built from when the caller does not name one. Defaults to the Basic
-    /// Catalog for <see cref="Version"/>.
-    /// </summary>
-    public A2UICatalog? DefaultCatalog { get; set; }
-
-    /// <summary>
-    /// The prefix generated surface ids start with. Useful for telling one agent's surfaces from
-    /// another's in a log.
-    /// </summary>
-    public string SurfaceIdPrefix { get; set; } = "surface";
 
     /// <summary>How many surfaces a session remembers before forgetting the oldest.</summary>
     public int SurfaceHistoryCapacity { get; set; } = 50;
@@ -31,9 +19,22 @@ public sealed class A2UIAgentOptions
     /// <summary>Whether inbound A2UI parts are turned into structured actions and a sentence for the model.</summary>
     public bool NormalizeInboundActions { get; set; } = true;
 
+    /// <summary>
+    /// What to do when a tool emits a surface from a catalog the renderer did not list in its
+    /// capabilities. Only applies when the renderer sent capabilities this turn. Defaults to
+    /// <see cref="A2UIUnsupportedCatalogPolicy.Warn"/>.
+    /// </summary>
+    public A2UIUnsupportedCatalogPolicy UnsupportedCatalogPolicy { get; set; } = A2UIUnsupportedCatalogPolicy.Warn;
+
+    /// <summary>Caps on what is read from the renderer. The renderer is not trusted.</summary>
+    public A2UIInboundLimits InboundLimits { get; set; } = new();
+
+    /// <summary>
+    /// Where to log. When <see langword="null"/>, the wrapped agent is asked for an
+    /// <see cref="ILoggerFactory"/> through <c>GetService</c>, and nothing is logged if it has none.
+    /// </summary>
+    public ILoggerFactory? LoggerFactory { get; set; }
+
     /// <summary>The version rules to apply, derived from <see cref="Version"/>.</summary>
     public A2UIVersionProfile Profile => A2UIVersionProfile.For(Version);
-
-    /// <summary>The catalog to use, resolving the default when none was set.</summary>
-    public A2UICatalog ResolveCatalog() => DefaultCatalog ?? A2UICatalogs.Basic(Version);
 }

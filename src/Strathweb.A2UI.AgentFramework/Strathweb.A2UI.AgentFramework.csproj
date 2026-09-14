@@ -11,6 +11,7 @@
     <ProjectReference Include="..\Strathweb.A2UI.A2A\Strathweb.A2UI.A2A.csproj" />
     <PackageReference Include="Microsoft.Extensions.AI.Abstractions" />
     <PackageReference Include="Microsoft.Agents.AI.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
 
 </Project>

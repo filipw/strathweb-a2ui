@@ -2,6 +2,8 @@ using System.Text;
 using System.Text.Json.Nodes;
 using A2A;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Strathweb.A2UI.A2A;
 using Strathweb.A2UI.Messages;
 
@@ -10,17 +12,32 @@ namespace Strathweb.A2UI.AgentFramework;
 /// <summary>Turns the A2UI parts a renderer sends into something an agent and a model can both use.</summary>
 public sealed class A2UIInboundNormalizer
 {
+    /// <summary>Every capabilities key any supported version uses; the ones not ours mark a version mismatch.</summary>
+    private static readonly string[] KnownCapabilitiesKeys = ["a2uiClientCapabilities", "a2uiRendererCapabilities"];
+
     private readonly A2UIVersionProfile profile;
+    private readonly A2UIInboundLimits limits;
+    private readonly ILogger logger;
 
     /// <summary>Creates a normalizer.</summary>
     /// <param name="profile">The version whose metadata keys to read. Defaults to v0.9.1.</param>
-    public A2UIInboundNormalizer(A2UIVersionProfile? profile = null)
+    /// <param name="limits">Caps on what is read. Defaults to <see cref="A2UIInboundLimits"/>'s defaults.</param>
+    /// <param name="logger">Where to report what was dropped or ignored. Defaults to nowhere.</param>
+    public A2UIInboundNormalizer(
+        A2UIVersionProfile? profile = null,
+        A2UIInboundLimits? limits = null,
+        ILogger? logger = null)
     {
         this.profile = profile ?? A2UIVersionProfile.Default;
+        this.limits = limits ?? new A2UIInboundLimits();
+        this.logger = logger ?? NullLogger.Instance;
     }
 
     /// <summary>Reads whatever A2UI a turn's messages carry.</summary>
-    /// <param name="messages">The inbound messages.</param>
+    /// <param name="messages">
+    /// The inbound messages. Expected to be this turn's messages only, as the A2A host passes them;
+    /// actions in older messages would be reported again.
+    /// </param>
     /// <param name="knownSurfaces">
     /// The surfaces this session created. Data models for anything else are dropped: a surface's data
     /// belongs to the agent that created it.
@@ -41,8 +58,10 @@ public sealed class A2UIInboundNormalizer
 
         foreach (var message in messages)
         {
-            capabilities ??= ReadCapabilities(message);
-            ReadSurfaceData(message, knownSurfaces, surfaceData, ignored);
+            var metadata = message.AdditionalProperties is { } properties ? ToMetadata(properties) : null;
+
+            capabilities ??= ReadCapabilities(metadata);
+            ReadSurfaceData(metadata, knownSurfaces, surfaceData, ignored);
             normalized.Add(NormalizeMessage(message, actions, errors));
         }
 
@@ -51,10 +70,17 @@ public sealed class A2UIInboundNormalizer
 
     /// <summary>Describes an action in the plainest sentence that still carries every value the user chose.</summary>
     /// <param name="action">The action.</param>
+    /// <returns>Text for the model to read, with each value cut at the default length limit.</returns>
+    public static string Describe(ActionMessage action) => Describe(action, new A2UIInboundLimits().MaxDescribedValueLength);
+
+    /// <summary>Describes an action in the plainest sentence that still carries every value the user chose.</summary>
+    /// <param name="action">The action.</param>
+    /// <param name="maxValueLength">The most characters of any one value to include.</param>
     /// <returns>Text for the model to read.</returns>
-    public static string Describe(ActionMessage action)
+    public static string Describe(ActionMessage action, int maxValueLength)
     {
         ArgumentNullException.ThrowIfNull(action);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxValueLength);
 
         var text = new StringBuilder()
             .Append("The user performed the \"")
@@ -78,13 +104,18 @@ public sealed class A2UIInboundNormalizer
             }
 
             first = false;
-            text.Append(pair.Key).Append('=').Append(Format(pair.Value));
+            text.Append(pair.Key).Append('=').Append(Format(pair.Value, maxValueLength));
         }
 
         return text.Append('.').ToString();
     }
 
-    private static ChatMessage NormalizeMessage(
+    /// <summary>
+    /// Replaces each A2UI part with text for the model. The structured actions go to the run context
+    /// rather than into the message: the inner agent stores the message in its chat history, and
+    /// content the framework cannot serialize would break every session store.
+    /// </summary>
+    private ChatMessage NormalizeMessage(
         ChatMessage message,
         List<ActionMessage> actions,
         List<ErrorMessage> errors)
@@ -93,16 +124,18 @@ public sealed class A2UIInboundNormalizer
 
         for (var i = 0; i < message.Contents.Count; i++)
         {
-            if (message.Contents[i].RawRepresentation is not Part part || !A2UIParts.IsA2UI(part))
+            var content = message.Contents[i];
+
+            if (content.RawRepresentation is Part part && A2UIParts.IsA2UI(part))
             {
-                continue;
+                // One forward pass keeps several parts in the order they arrived.
+                replacement ??= [.. message.Contents.Take(i)];
+                replacement.AddRange(Expand(part, actions, errors));
             }
-
-            replacement ??= [.. message.Contents];
-            var expanded = Expand(part, actions, errors);
-
-            replacement.RemoveAt(replacement.IndexOf(message.Contents[i]));
-            replacement.InsertRange(Math.Min(i, replacement.Count), expanded);
+            else
+            {
+                replacement?.Add(content);
+            }
         }
 
         if (replacement is null)
@@ -119,9 +152,19 @@ public sealed class A2UIInboundNormalizer
         };
     }
 
-    private static List<AIContent> Expand(Part part, List<ActionMessage> actions, List<ErrorMessage> errors)
+    private List<AIContent> Expand(Part part, List<ActionMessage> actions, List<ErrorMessage> errors)
     {
         var contents = new List<AIContent>();
+
+        var bytes = part.Data is { } data ? Encoding.UTF8.GetByteCount(data.GetRawText()) : 0;
+        if (bytes > limits.MaxPartBytes)
+        {
+            logger.InboundPartTooLarge(bytes, limits.MaxPartBytes);
+            contents.Add(new TextContent(
+                $"An A2UI message from the renderer was ignored: it was {bytes} bytes, above the limit of " +
+                $"{limits.MaxPartBytes}."));
+            return contents;
+        }
 
         // A message list is not a transactional unit: report what cannot be read and use the rest.
         if (!A2UIParts.TryReadTolerant(part, out var messages, out var failures))
@@ -131,6 +174,7 @@ public sealed class A2UIInboundNormalizer
 
         foreach (var failure in failures)
         {
+            logger.InboundMessageUnreadable(failure);
             contents.Add(new TextContent($"An A2UI message from the renderer could not be read: {failure}"));
         }
 
@@ -139,12 +183,13 @@ public sealed class A2UIInboundNormalizer
             switch (message)
             {
                 case ActionMessage action:
+                    logger.ActionReceived(action.Name, action.SurfaceId);
                     actions.Add(action);
-                    contents.Add(new A2UIActionContent(action, part));
-                    contents.Add(new TextContent(Describe(action)));
+                    contents.Add(new TextContent(Describe(action, limits.MaxDescribedValueLength)));
                     break;
 
                 case ErrorMessage error:
+                    logger.RendererError(error.Code, error.SurfaceId, error.Message);
                     errors.Add(error);
                     contents.Add(new TextContent(
                         $"The renderer could not display surface {error.SurfaceId}: {error.Message} " +
@@ -156,20 +201,56 @@ public sealed class A2UIInboundNormalizer
         return contents;
     }
 
-    private A2UIRendererCapabilities? ReadCapabilities(ChatMessage message) =>
-        message.AdditionalProperties is { } properties &&
-        A2UIMetadata.TryReadCapabilities(ToMetadata(properties), profile, out var capabilities)
-            ? capabilities
-            : null;
+    private A2UIRendererCapabilities? ReadCapabilities(Dictionary<string, JsonNode?>? metadata)
+    {
+        if (metadata is null)
+        {
+            return null;
+        }
+
+        if (A2UIMetadata.TryReadCapabilities(metadata, profile, out var capabilities))
+        {
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.CapabilitiesRead(string.Join(", ", capabilities.SupportedCatalogIds));
+            }
+
+            return capabilities;
+        }
+
+        // Capabilities under another version's key are the one visible sign of version skew; the
+        // surfaces themselves would just render blank.
+        foreach (var key in KnownCapabilitiesKeys)
+        {
+            if (!string.Equals(key, profile.CapabilitiesMetadataKey, StringComparison.Ordinal) &&
+                metadata.ContainsKey(key))
+            {
+                logger.CapabilitiesVersionMismatch(key, profile.CapabilitiesMetadataKey);
+            }
+        }
+
+        return null;
+    }
 
     private void ReadSurfaceData(
-        ChatMessage message,
+        Dictionary<string, JsonNode?>? metadata,
         A2UISurfaceRegistry? knownSurfaces,
         Dictionary<string, JsonNode?> into,
         List<string> ignored)
     {
-        if (message.AdditionalProperties is not { } properties ||
-            !A2UIMetadata.TryReadDataModel(ToMetadata(properties), profile, out var dataModel))
+        if (metadata is null || !metadata.TryGetValue(profile.DataModelMetadataKey, out var raw) || raw is null)
+        {
+            return;
+        }
+
+        var bytes = Encoding.UTF8.GetByteCount(raw.ToJsonString());
+        if (bytes > limits.MaxDataModelBytes)
+        {
+            logger.DataModelTooLarge(bytes, limits.MaxDataModelBytes);
+            return;
+        }
+
+        if (!A2UIMetadata.TryReadDataModel(metadata, profile, out var dataModel))
         {
             return;
         }
@@ -184,6 +265,7 @@ public sealed class A2UIInboundNormalizer
             }
             else
             {
+                logger.SurfaceDataIgnored(pair.Key);
                 ignored.Add(pair.Key);
             }
         }
@@ -209,11 +291,21 @@ public sealed class A2UIInboundNormalizer
         return metadata;
     }
 
-    private static string Format(JsonNode? value) => value switch
+    private static string Format(JsonNode? value, int maxLength)
     {
-        null => "(empty)",
-        JsonValue scalar when scalar.TryGetValue<string>(out var text) =>
-            text.Length == 0 ? "(empty)" : "\"" + text + "\"",
-        _ => value.ToJsonString(),
-    };
+        switch (value)
+        {
+            case null:
+                return "(empty)";
+
+            case JsonValue scalar when scalar.TryGetValue<string>(out var text):
+                return text.Length == 0 ? "(empty)" : "\"" + Cut(text, maxLength) + "\"";
+
+            default:
+                return Cut(value.ToJsonString(), maxLength);
+        }
+    }
+
+    private static string Cut(string text, int maxLength) =>
+        text.Length <= maxLength ? text : string.Concat(text.AsSpan(0, maxLength), "…");
 }

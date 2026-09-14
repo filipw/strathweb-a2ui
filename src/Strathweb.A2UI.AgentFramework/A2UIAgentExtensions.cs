@@ -13,7 +13,7 @@ public static class A2UIAgentExtensions
     /// <code>
     /// AIAgent agent = chatClient
     ///     .CreateAIAgent(instructions: "...", tools: [askSatisfaction])
-    ///     .WithA2UI(o => o.SurfaceIdPrefix = "survey");
+    ///     .WithA2UI(o => o.StreamSurfacesAsTheyAppear = false);
     /// </code>
     /// </example>
     public static A2UIAgent WithA2UI(this AIAgent agent, Action<A2UIAgentOptions>? configure = null)

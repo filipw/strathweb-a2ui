@@ -42,7 +42,7 @@ if (apiKey is { Length: > 0 })
             name: "survey-agent",
             description: "Asks how a support conversation went, using a form rather than prose.",
             tools: [AIFunctionFactory.Create(AskForUserSatisfaction, "ask_for_user_satisfaction")])
-        .WithA2UI(options => options.SurfaceIdPrefix = "survey");
+        .WithA2UI();
 
     builder.Services.AddA2AServer(agent);
     builder.Services.AddSingleton(agent);

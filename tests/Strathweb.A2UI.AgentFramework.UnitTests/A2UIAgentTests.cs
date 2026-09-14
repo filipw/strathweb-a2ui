@@ -81,6 +81,34 @@ public class A2UIAgentTests
     }
 
     [Fact]
+    public async Task RunStreamingAsync_ASurfaceEmittedAfterTheFirstUpdate_StillArrives()
+    {
+        // An AsyncLocal set inside an async iterator does not survive a yield. The scope has to be
+        // re-entered for every step, or the tool runs outside it.
+        var agent = new ScriptedAgent(() => A2UIEmitter.Emit(Survey()), runAfterFirstUpdate: true).WithA2UI();
+
+        var updates = new List<AgentResponseUpdate>();
+        await foreach (var update in agent.RunStreamingAsync("hello"))
+        {
+            updates.Add(update);
+        }
+
+        Assert.Single(updates.SelectMany(u => u.Contents).OfType<A2UIContent>());
+    }
+
+    [Fact]
+    public async Task RunStreamingAsync_TheRunContextIsStillThereAfterTheFirstUpdate()
+    {
+        var agent = new ScriptedAgent(
+            () => Assert.NotNull(A2UIRunContext.Current),
+            runAfterFirstUpdate: true).WithA2UI();
+
+        await foreach (var _ in agent.RunStreamingAsync("hello"))
+        {
+        }
+    }
+
+    [Fact]
     public async Task RunAsync_SeveralSurfaces_ArriveInTheOrderTheyWereEmitted()
     {
         var agent = new ScriptedAgent(() =>

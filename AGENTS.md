@@ -64,3 +64,14 @@ House rules for working in this repository.
   A `JsonNode?` cannot express that, hence the presence flag.
 - Tool return strings are prompt surface. A tool that shows a UI must say so, or the model describes
   the form in prose as well.
+- An `AsyncLocal` set inside an async iterator is reverted at every `yield`. `A2UIAgent` re-enters its
+  scopes around each `MoveNextAsync` of the inner run; a scope opened once at the top of
+  `RunCoreStreamingAsync` is gone by the time a tool runs after the first update.
+- `AIContent` is polymorphic over a closed set of types and the framework's default
+  `JsonSerializerOptions` are read-only. A custom content type that reaches the chat history the
+  wrapped agent stores breaks every session store on the next save. Surfaces travel on a message of
+  their own that the inner agent never sees; inbound actions become `TextContent` plus
+  `A2UIRunContext.Actions`.
+- The scripted test doubles run their callback before the first yield and keep no chat history.
+  Anything that touches streaming or sessions also needs a test on `ToolCallingChatClient`, which
+  streams text before the function call the way real providers do.

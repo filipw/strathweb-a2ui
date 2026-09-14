@@ -8,7 +8,7 @@ namespace Strathweb.A2UI.AgentFramework.UnitTests;
 /// An agent that runs a callback instead of a model, standing in for the tool calls a real run would
 /// make.
 /// </summary>
-internal sealed class ScriptedAgent(Action run, string reply = "Done.") : AIAgent
+internal sealed class ScriptedAgent(Action run, string reply = "Done.", bool runAfterFirstUpdate = false) : AIAgent
 {
     protected override ValueTask<AgentSession> CreateSessionCoreAsync(CancellationToken cancellationToken = default) =>
         new(new ScriptedSession());
@@ -41,6 +41,14 @@ internal sealed class ScriptedAgent(Action run, string reply = "Done.") : AIAgen
         AgentRunOptions? options = null,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        if (runAfterFirstUpdate)
+        {
+            // A real agent streams the model's words before any tool runs, so the callback lands
+            // after the consumer has already seen an update.
+            yield return new AgentResponseUpdate(ChatRole.Assistant, "One moment.");
+            await Task.Yield();
+        }
+
         run();
         await Task.Yield();
         yield return new AgentResponseUpdate(ChatRole.Assistant, reply);

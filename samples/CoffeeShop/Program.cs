@@ -7,7 +7,7 @@ using Strathweb.A2UI.AgentFramework;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var agent = new CoffeeShopAgent().WithA2UI(options => options.SurfaceIdPrefix = "coffee");
+var agent = new CoffeeShopAgent().WithA2UI();
 
 // Without a session store the A2A host hands the agent a fresh session every turn, which quietly
 // disables everything that spans turns: the surface registry, and with it the data models the

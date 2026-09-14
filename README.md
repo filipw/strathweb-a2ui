@@ -55,7 +55,7 @@ app.MapA2AJsonRpc(agent, "/a2a");
 ```
 
 The surface leaves as an `application/a2ui+json` data part. The user's answer arrives on a later turn
-as an `A2UIActionContent` on `A2UIRunContext.Actions`, and as a plain sentence for the model.
+as an `ActionMessage` on `A2UIRunContext.Actions`, and as a plain sentence for the model.
 
 ## What it handles
 
@@ -63,7 +63,10 @@ as an `A2UIActionContent` on `A2UIRunContext.Actions`, and as a plain sentence f
   write an object graph, the builder writes the ids.
 - Validation at `Build()`: duplicate ids, dangling references, cycles, unreachable components,
   malformed binding paths, unknown component types.
-- Inbound actions become a sentence for the model rather than a JSON blob.
+- Inbound actions become a sentence for the model rather than a JSON blob, and nothing is added to
+  the chat history that a session store cannot serialize.
+- Silent failures are logged: a surface from a catalog the renderer did not advertise, a data model
+  for a surface this session did not create, an inbound part that could not be read or was too large.
 - No reflection-based serialization; the protocol package has no dependencies.
 
 ## Conformance

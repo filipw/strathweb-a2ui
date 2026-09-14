@@ -14,9 +14,10 @@
   </ItemGroup>
 
 
-  <!-- The vendored schemas are ground truth for more than one test project. -->
+  <!-- The vendored schemas and the fake model are shared with the other agent test projects. -->
   <ItemGroup>
     <Compile Include="..\Shared\*.cs" LinkBase="Shared" />
+    <Compile Include="..\Shared\Agents\*.cs" LinkBase="Shared\Agents" />
   </ItemGroup>
 
 </Project>

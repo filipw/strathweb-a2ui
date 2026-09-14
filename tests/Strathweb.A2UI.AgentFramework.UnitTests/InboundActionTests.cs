@@ -32,13 +32,42 @@ public class InboundActionTests
     }
 
     [Fact]
-    public void Normalize_AnAction_BecomesStructuredContentAndASentence()
+    public void Normalize_AnAction_BecomesASentenceForTheModelAndAStructuredActionForCode()
     {
         var result = new A2UIInboundNormalizer().Normalize([Inbound(Action())]);
 
-        var contents = result.Messages.Single().Contents;
-        Assert.Contains(contents, c => c is A2UIActionContent);
-        Assert.Contains(contents, c => c is TextContent);
+        var content = Assert.Single(result.Messages.Single().Contents);
+        Assert.IsType<TextContent>(content);
+        Assert.Single(result.Actions);
+    }
+
+    [Fact]
+    public void Normalize_TheMessageCarriesNothingTheFrameworkCannotSerialize()
+    {
+        // The inner agent stores this message in its chat history; a custom AIContent there would
+        // break every session store that serializes the session.
+        var result = new A2UIInboundNormalizer().Normalize([Inbound(Action())]);
+
+        Assert.All(result.Messages.Single().Contents, c => Assert.IsType<TextContent>(c));
+    }
+
+    [Fact]
+    public void Normalize_SeveralPartsInOneMessage_KeepTheirOrder()
+    {
+        var a2a = new Message
+        {
+            Role = Role.User,
+            Parts = [Part.FromText("hi"), A2UIParts.Create(Action("first")), A2UIParts.Create(Action("second"))],
+        };
+
+        var result = new A2UIInboundNormalizer().Normalize([a2a.ToChatMessage()]);
+
+        var texts = result.Messages.Single().Contents.OfType<TextContent>().Select(c => c.Text).ToList();
+        Assert.Equal(3, texts.Count);
+        Assert.Equal("hi", texts[0]);
+        Assert.Contains("\"first\"", texts[1], StringComparison.Ordinal);
+        Assert.Contains("\"second\"", texts[2], StringComparison.Ordinal);
+        Assert.Equal(["first", "second"], result.Actions.Select(a => a.Name));
     }
 
     [Fact]
