@@ -28,8 +28,7 @@ public sealed class A2UIContent : AIContent
         Messages = messages;
         SurfaceId = CreatedSurfaceId(messages);
 
-        // Must be set here, not lazily. A2A's ToPart() returns RawRepresentation unchanged when it
-        // already holds a Part, and maps nothing else usable; built later, the surface is dropped.
+        // A2A's ToPart() only maps known content types unless RawRepresentation already holds a Part.
         var part = A2UIParts.Create(messages);
         RawRepresentation = part;
         Payload = part.Data!.Value;

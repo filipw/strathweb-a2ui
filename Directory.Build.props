@@ -50,8 +50,8 @@
     <Product>A2UI for .NET</Product>
     <Copyright>Copyright (c) 2026 Filip W</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/filipw/a2ui-dotnet</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/filipw/a2ui-dotnet</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/filipw/strathweb-a2ui</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/filipw/strathweb-a2ui</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>a2ui;a2a;agent;generative-ui;ai</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>

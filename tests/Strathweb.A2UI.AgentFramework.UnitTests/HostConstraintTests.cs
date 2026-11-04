@@ -43,16 +43,29 @@ public class HostConstraintTests
         Assert.Null(new FunctionResultContent("call-1", "result").ToPart());
     }
 
-    [Fact]
-    public void ToPart_DataContent_ProducesRawBytesRatherThanAJsonDataPart()
+    [Theory]
+    [InlineData("application/json")]
+    [InlineData("application/a2ui+json")]
+    [InlineData("application/json; charset=utf-8")]
+    public void ToPart_JsonDataContent_ProducesAJsonDataPart(string mediaType)
     {
-        // Returning DataContent with the A2UI MIME type produces a base64 blob, not the JSON data
-        // part the specification requires.
-        var part = new DataContent(Encoding.UTF8.GetBytes("""{"a":1}"""), "application/json").ToPart();
+        var part = new DataContent(Encoding.UTF8.GetBytes("""{"a":1}"""), mediaType).ToPart();
+
+        Assert.NotNull(part);
+        Assert.Equal(1, part.Data!.Value.GetProperty("a").GetInt32());
+        Assert.Equal(mediaType, part.MediaType);
+        Assert.Null(part.Raw);
+    }
+
+    [Fact]
+    public void ToPart_NonJsonDataContent_ProducesRawBytes()
+    {
+        var bytes = Encoding.UTF8.GetBytes("not JSON");
+        var part = new DataContent(bytes, "application/octet-stream").ToPart();
 
         Assert.NotNull(part);
         Assert.Null(part.Data);
-        Assert.NotNull(part.Raw);
+        Assert.Equal(bytes, part.Raw);
     }
 
     [Fact]

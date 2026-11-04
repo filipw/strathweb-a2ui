@@ -1,6 +1,7 @@
 using A2A;
 using GenerativeDashboard;
 using GenerativeDashboard.Components;
+using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Hosting;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.AI;
@@ -38,7 +39,9 @@ var agent = chatClient
         options.LoggerFactory = LoggerFactory.Create(logging => logging.AddProvider(demoLogs));
     });
 
+#pragma warning disable MAAI001 // The in-memory session store is an experimental hosting API.
 builder.Services.AddKeyedSingleton<AgentSessionStore>(agent.Name, new InMemoryAgentSessionStore());
+#pragma warning restore MAAI001
 builder.Services.AddA2AServer(agent);
 
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();

@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using A2A;
+using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Hosting;
 using Microsoft.Extensions.AI;
 using Strathweb.A2UI.A2A;
@@ -30,9 +31,11 @@ public class SessionStoreTests
                 tools: [AIFunctionFactory.Create(ShowSurvey, "show_survey")])
             .WithA2UI();
 
+#pragma warning disable MAAI001 // The in-memory session store is an experimental hosting API.
         await using var host = await A2AHost.StartAsync(
             agent,
             services => services.AddKeyedSingleton<AgentSessionStore>(agent.Name, new InMemoryAgentSessionStore()));
+#pragma warning restore MAAI001
 
         var first = await host.Client.SendMessageAsync(Text("How did that go?"));
         Assert.Single(first.Message!.Parts, A2UIParts.IsA2UI);

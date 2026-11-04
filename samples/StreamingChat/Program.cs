@@ -1,4 +1,5 @@
 using A2A;
+using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Hosting;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.AI;
@@ -29,7 +30,9 @@ var agent = chatClient
     .WithA2UI(options => options.LoggerFactory = LoggerFactory.Create(logging => logging.AddProvider(demoLogs)));
 
 // The agent, hosted over A2A in this same process. The page talks to it the way any client would.
+#pragma warning disable MAAI001 // The in-memory session store is an experimental hosting API.
 builder.Services.AddKeyedSingleton<AgentSessionStore>(agent.Name, new InMemoryAgentSessionStore());
+#pragma warning restore MAAI001
 builder.Services.AddA2AServer(agent);
 
 // The page: Blazor Server, one chat session per circuit, speaking message/stream to /a2a.

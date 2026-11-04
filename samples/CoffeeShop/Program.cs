@@ -1,5 +1,6 @@
 using A2A;
 using CoffeeShop;
+using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Hosting;
 using Strathweb.A2UI;
 using Strathweb.A2UI.A2A;
@@ -12,7 +13,9 @@ var agent = new CoffeeShopAgent().WithA2UI();
 // Without a session store the A2A host hands the agent a fresh session every turn, which quietly
 // disables everything that spans turns: the surface registry, and with it the data models the
 // renderer reports back.
+#pragma warning disable MAAI001 // The in-memory session store is an experimental hosting API.
 builder.Services.AddKeyedSingleton<AgentSessionStore>(agent.Name, new InMemoryAgentSessionStore());
+#pragma warning restore MAAI001
 builder.Services.AddA2AServer(agent);
 builder.Services.AddRouting();
 

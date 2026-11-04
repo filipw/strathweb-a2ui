@@ -1,6 +1,7 @@
 using A2A;
 using BookingWizard;
 using BookingWizard.Components;
+using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Hosting;
 using Microsoft.AspNetCore.Components;
 using Strathweb.A2UI;
@@ -19,7 +20,9 @@ var agent = new BookingAgent().WithA2UI(options => options.LoggerFactory = Logge
 
 // The wizard reads the data model the renderer reports back, which only works when the session
 // survives between turns.
+#pragma warning disable MAAI001 // The in-memory session store is an experimental hosting API.
 builder.Services.AddKeyedSingleton<AgentSessionStore>(agent.Name, new InMemoryAgentSessionStore());
+#pragma warning restore MAAI001
 builder.Services.AddA2AServer(agent);
 
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
